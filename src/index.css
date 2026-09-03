@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-primary: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+    --color-emerald-950: #022c22;
+    --color-emerald-900: #064e3b;
+    --color-emerald-800: #065f46;
+    --color-emerald-700: #047857;
+    --color-emerald-600: #059669;
+    --color-emerald-500: #10b981;
+    --color-emerald-100: #d1fae5;
+    --color-emerald-50: #ecfdf5;
+  }
+
+  html {
+    font-family: var(--font-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
+    background-color: #f8fafc;
+    color: #1e293b;
+  }
+
+  /* Universal font family assignment */
+  *, *::before, *::after {
+    font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+  }
+
+  /* Typography Hierarchy & Weights */
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.2px;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.1px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: 0px;
+  }
+
+  h4, h5, h6 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  /* Body text & paragraph styling */
+  p, span, div, li, td {
+    line-height: 1.5;
+    letter-spacing: 0.2px;
+  }
+
+  /* Tables font & cell normalization */
+  table {
+    font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
+  }
+
+  th {
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.2px;
+  }
+
+  td {
+    font-size: 13.5px;
+    font-weight: 400;
+  }
+
+  /* Inputs & Selects normalization */
+  input, select, textarea {
+    font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif !important;
+    font-size: 13.5px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
+  }
+
+  /* Buttons normalization */
+  button {
+    font-family: 'Sarabun', 'Segoe UI', Tahoma, sans-serif !important;
+    font-size: 13px;
+    letter-spacing: 0.2px;
+  }
+
+  /* Captions & Subtexts */
+  small, .caption, .subtext {
+    font-size: 12px;
+    font-weight: 400;
+    color: #6B7280;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Print stylesheets for Government Form reports and Official Documents */
+@page {
+  size: landscape;
+  margin: 8mm 6mm;
+}
+
+.print-only-header {
+  display: none;
+}
+
+@media print {
+  /* 1. Global Reset & Canvas Normalization */
+  body, html, #root, #main, main, #content {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 8.5pt !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 2. Hide Non-Printable Elements (Sidebar, Navbar, Backdrops, Action Buttons, Overlays) */
+  .no-print,
+  .print-hide,
+  .print\:hidden,
+  #sidebar,
+  #topbar,
+  header,
+  nav,
+  aside,
+  button,
+  input,
+  select,
+  .toast-container,
+  [role="tooltip"],
+  [aria-modal="true"] > div:first-child:not([class*="print-include"]),
+  .backdrop-blur-2xs,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur {
+    display: none !important;
+  }
+
+  /* 3. Official Print Header & Print-Only Sections */
+  .print-only,
+  .print-only-header {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* 4. Modal / Dialog Print Container Normalization (Prevent Bleed-through & Dark Overlays) */
+  .fixed.inset-0,
+  div[class*="fixed inset-0"] {
+    position: static !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* 5. Report Sheets, Tables & Document Layout */
+  .report-sheet,
+  .print-document,
+  .print-container {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+    background: #ffffff !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 8.5pt !important;
+    line-height: 1.25 !important;
+    page-break-inside: auto;
+    background: #ffffff !important;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  th, td {
+    border: 1px solid #475569 !important;
+    padding: 3px 5px !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    font-weight: 700 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+}
