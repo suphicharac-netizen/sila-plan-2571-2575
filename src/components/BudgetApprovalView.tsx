@@ -1,1209 +1,850 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Coins,
-  Plus,
-  Calendar,
-  X,
-  Save,
-  Search,
-  RotateCcw,
-  ListFilter,
-  Printer,
-  Download,
-  Building2,
-  Layers,
-  FileText,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   Landmark,
-  FileSpreadsheet,
-  Tag,
+  Search,
   FolderOpen,
-  Menu,
-  Sparkles,
-  ArrowRight,
-  HelpCircle,
+  RotateCcw,
+  Download,
+  Printer,
+  FileSpreadsheet,
+  Plus,
   Clock,
-  PieChart,
-  ShieldCheck,
-  Check
+  CheckCircle2,
+  MoreVertical,
+  Eye,
+  ShieldAlert,
+  AlertTriangle,
+  X
 } from 'lucide-react';
-import {
-  BudgetApproval,
-  Project,
-  BudgetStatus,
-  OptionsData,
-  PlanApproval
-} from '../types';
-import { YEARS, ORG_NAME, STANDARD_STRATEGIC_ISSUES, sortStrategicIssues } from '../data/initialData';
-import { TablePagination } from './TablePagination';
-import { StandardFilterBar } from './StandardFilterBar';
-import { exportProjects } from '../services/exportService';
-
-// Standard e-LAAS / e-Plan Budget Sources as requested
-export const ELAAS_BUDGET_SOURCES = [
-  'เทศบัญญัติงบประมาณรายจ่าย',
-  'เงินสะสม (จ่ายขาดเงินสะสม)',
-  'เงินอุดหนุนเฉพาะกิจ',
-  'โอนเพิ่ม/โอนลด/ตั้งจ่ายเป็นรายการใหม่',
-  'เงินอุดหนุนจาก อบจ. ขอนแก่น',
-  'งบประมาณสนับสนุนจากหน่วยงานอื่น'
-] as const;
-
-export const ELAAS_APPROVAL_TYPES = [
-  'เทศบัญญัติงบประมาณรายจ่าย',
-  'เงินสะสม (จ่ายขาดเงินสะสม)',
-  'เงินอุดหนุนเฉพาะกิจ',
-  'โอนเพิ่ม/โอนลด/ตั้งจ่ายเป็นรายการใหม่',
-  'เงินอุดหนุนจาก อบจ. ขอนแก่น',
-  'งบประมาณสนับสนุนจากหน่วยงานอื่น'
-] as const;
+import { ProjectData, FilterCriteria } from '../types';
+import { DEVELOPMENT_STRATEGIES, BUDGET_SOURCES } from '../utils/constants';
+import { matchesProjectSearch, getProjectDisplayId } from '../utils/projectCode';
 
 interface BudgetApprovalViewProps {
-  budgetApprovals: BudgetApproval[];
-  onSaveBudgetApproval: (data: Partial<BudgetApproval>) => void;
-  onDeleteBudgetApproval: (id: number) => void;
-  globalFiscalYear: number;
-  projects?: Project[];
-  approvals?: PlanApproval[];
-  options?: OptionsData;
-  onSelectProject?: (p: Project) => void;
-  onSaveProject?: (p: Partial<Project> & { ID: number }) => void;
-  onToggleMobile?: () => void;
+  projects: ProjectData[];
+  onOpenApprovalModal: (project: ProjectData) => void;
+  onOpenRemainingBudgetReport: () => void;
+  onOpenProjectDetail?: (project: ProjectData) => void;
+  onRevokeApproval?: (project: ProjectData) => void;
+  isAdmin?: boolean;
 }
 
 export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
-  budgetApprovals,
-  onSaveBudgetApproval,
-  onDeleteBudgetApproval,
-  globalFiscalYear,
-  projects = [],
-  approvals = [],
-  options,
-  onSelectProject,
-  onSaveProject,
-  onToggleMobile
+  projects,
+  onOpenApprovalModal,
+  onOpenRemainingBudgetReport,
+  onOpenProjectDetail,
+  onRevokeApproval,
+  isAdmin = true
 }) => {
-  // =========================================================================
-  // 1. SEARCH & FILTER STATE (ตามเงื่อนไขข้อ 1)
-  // =========================================================================
-  const [filterStrategy, setFilterStrategy] = useState<string>('ทั้งหมด');
-  const [filterProjectName, setFilterProjectName] = useState<string>('');
-  const [filterBudget, setFilterBudget] = useState<string>('');
-  const [filterProjectType, setFilterProjectType] = useState<string>('ทั้งหมด');
-  const [approvalStatusRadio, setApprovalStatusRadio] = useState<'all' | 'approved' | 'unapproved'>('all');
-  const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>(String(globalFiscalYear));
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({
+    year: '2571',
+    planStrategy: '',
+    budgetSource: '',
+    searchKeyword: '',
+    budgetAmount: '',
+    status: 'all'
+  });
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(20);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [revokingProject, setRevokingProject] = useState<ProjectData | null>(null);
 
-  // Modal: 'เพิ่มอนุมัติงบประมาณ' (ตามเงื่อนไขข้อ 3)
-  const [approvalModalProject, setApprovalModalProject] = useState<Project | null>(null);
-  const [formProjectName, setFormProjectName] = useState<string>('');
-  const [formApprovalDate, setFormApprovalDate] = useState<string>('');
-  const [formApprovalType, setFormApprovalType] = useState<string>('เทศบัญญัติงบประมาณรายจ่าย');
-  const [formBudgetSource, setFormBudgetSource] = useState<string>(ELAAS_BUDGET_SOURCES[0]);
-  const [formApprovedAmount, setFormApprovedAmount] = useState<number | ''>('');
-  const [formNote, setFormNote] = useState<string>('');
+  // Close context menu on outside click
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setOpenActionMenuId(null);
+    };
+    if (openActionMenuId) {
+      document.addEventListener('click', handleDocumentClick);
+      return () => document.removeEventListener('click', handleDocumentClick);
+    }
+  }, [openActionMenuId]);
 
-  // Modal: 'รายงานยอดงบประมาณคงเหลือ'
-  const [isBalanceReportOpen, setIsBalanceReportOpen] = useState<boolean>(false);
-
-  // Helper formatting
-  const formatMoney = (n: number) => {
-    return (Number(n) || 0).toLocaleString('th-TH', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+  // Handle Admin revoking budget approval
+  const handleExecuteRevoke = (project: ProjectData) => {
+    const updated: ProjectData = {
+      ...project,
+      budgetSource: '- ยังไม่ได้จัดสรร -',
+      budgetApproved: 0,
+      approvedDate: '-',
+      approvalOrderNo: '',
+      status: 'pending'
+    };
+    if (onRevokeApproval) {
+      onRevokeApproval(updated);
+    }
+    setRevokingProject(null);
+    setOpenActionMenuId(null);
   };
 
-  const formatMoneyNoDec = (n: number) => {
-    return (Number(n) || 0).toLocaleString('th-TH');
-  };
-
-  // Extract unique strategies (ยุทธศาสตร์ / ประเด็นการพัฒนา)
-  const strategyList = useMemo(() => {
-    const standard = options?.['ประเด็นการพัฒนา'] || STANDARD_STRATEGIC_ISSUES;
-    const set = new Set<string>(standard);
-    projects.forEach((p) => {
-      if (p['ประเด็นการพัฒนา']) set.add(p['ประเด็นการพัฒนา']);
-    });
-    return sortStrategicIssues(Array.from(set));
-  }, [options, projects]);
-
-  // Handle Reset Filter / เริ่มค้นหาใหม่
-  const handleResetFilters = () => {
-    setFilterStrategy('ทั้งหมด');
-    setFilterProjectName('');
-    setFilterBudget('');
-    setFilterProjectType('ทั้งหมด');
-    setApprovalStatusRadio('all');
-  };
-
-  // Handle Show All / แสดงทั้งหมด
-  const handleShowAll = () => {
-    setFilterStrategy('ทั้งหมด');
-    setFilterProjectName('');
-    setFilterBudget('');
-    setFilterProjectType('ทั้งหมด');
-    setApprovalStatusRadio('all');
-  };
-
-  // Check if a project is approved
-  const isProjectApproved = (p: Project): boolean => {
-    const approvedAmt = Number(p['งบประมาณที่อนุมัติ']) || 0;
-    const status = p['สถานะงบประมาณ'];
-    return (
-      approvedAmt > 0 ||
-      status === 'ได้รับการจัดสรรงบประมาณแล้ว (มีงบพร้อมใช้)' ||
-      p['โครงการอนุมัติตามเทศบัญญัติ'] === 'ใช่' ||
-      p['โครงการอนุมัติจากเงินสะสม'] === 'ใช่' ||
-      p['โครงการอนุมัติจากโอนเปลี่ยนแปลง'] === 'ใช่' ||
-      p['โครงการอนุมัติจากอบจ'] === 'ใช่' ||
-      p['โครงการอนุมัติจากหน่วยงานอื่น'] === 'ใช่'
-    );
-  };
-
-  // Target Year helper
-  const targetYear = selectedFiscalYear === 'all' ? globalFiscalYear : parseInt(selectedFiscalYear, 10);
-
-  // Filtered Projects
+  // Filter projects based on criteria
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
-      // 1. Fiscal Year Match
-      if (selectedFiscalYear !== 'all') {
-        const yr = parseInt(selectedFiscalYear, 10);
-        const hasBudgetInYear = Number(p[`งบประมาณ ${yr}` as keyof Project]) > 0;
-        const isRecordedYear = String(p['ปี พ.ศ.']) === selectedFiscalYear;
-        const isApproved = isProjectApproved(p);
-        if (!hasBudgetInYear && !isRecordedYear && !isApproved) {
-          return false;
-        }
-      }
-
-      // 2. Strategy Filter (ยุทธศาสตร์ อปท.)
-      if (filterStrategy !== 'ทั้งหมด' && p['ประเด็นการพัฒนา'] !== filterStrategy) {
+      // Year filter
+      if (filterCriteria.year && filterCriteria.year !== 'all' && p.year !== filterCriteria.year) {
         return false;
       }
-
-      // 3. Project Name Filter
-      if (filterProjectName.trim()) {
-        const query = filterProjectName.toLowerCase().trim();
-        const name = (p['ชื่อโครงการ'] || '').toLowerCase();
-        const ordName = (p['ชื่อโครงการตามข้อบัญญัติ'] || '').toLowerCase();
-        const obj = (p['วัตถุประสงค์'] || '').toLowerCase();
-        const plan = (p['แผนงาน'] || '').toLowerCase();
-        if (!name.includes(query) && !ordName.includes(query) && !obj.includes(query) && !plan.includes(query)) {
+      // Plan Strategy filter
+      if (filterCriteria.planStrategy && p.planStrategy !== filterCriteria.planStrategy) {
+        return false;
+      }
+      // Budget Source filter
+      if (filterCriteria.budgetSource && p.budgetSource !== filterCriteria.budgetSource) {
+        return false;
+      }
+      // Status filter
+      if (filterCriteria.status === 'approved' && p.status !== 'approved') {
+        return false;
+      }
+      if (filterCriteria.status === 'pending' && p.status !== 'pending') {
+        return false;
+      }
+      // Search keyword filter (name, code, department, or note)
+      if (filterCriteria.searchKeyword.trim()) {
+        if (!matchesProjectSearch(filterCriteria.searchKeyword, p)) return false;
+      }
+      // Budget Amount filter
+      if (filterCriteria.budgetAmount.trim()) {
+        const amount = Number(filterCriteria.budgetAmount.replace(/,/g, ''));
+        if (!isNaN(amount) && amount > 0 && p.budgetPlan !== amount) {
           return false;
         }
       }
-
-      // 4. Budget Filter (งบประมาณ)
-      if (filterBudget.trim() !== '') {
-        const budgetNum = Number(filterBudget.replace(/,/g, '').trim());
-        if (!isNaN(budgetNum) && budgetNum >= 0) {
-          if (selectedFiscalYear !== 'all') {
-            const projectPlannedBudget = Number(p[`งบประมาณ ${targetYear}` as keyof Project]) || 0;
-            const approvedBudget = Number(p['งบประมาณที่อนุมัติ']) || 0;
-            const isMatch =
-              projectPlannedBudget === budgetNum ||
-              approvedBudget === budgetNum ||
-              (projectPlannedBudget > 0 && projectPlannedBudget <= budgetNum);
-            if (!isMatch) return false;
-          } else {
-            const approvedBudget = Number(p['งบประมาณที่อนุมัติ']) || 0;
-            const matchInAnyYear = YEARS.some((yr) => {
-              const amt = Number(p[`งบประมาณ ${yr}` as keyof Project]) || 0;
-              return amt === budgetNum || (amt > 0 && amt <= budgetNum);
-            });
-            if (!matchInAnyYear && approvedBudget !== budgetNum) return false;
-          }
-        }
-      }
-
-      // 5. Project Type / Budget Source Filter (ประเภทโครงการ / แหล่งที่มาของงบประมาณ)
-      if (filterProjectType !== 'ทั้งหมด') {
-        if (filterProjectType === 'เทศบัญญัติงบประมาณรายจ่าย') {
-          if (
-            p['โครงการอนุมัติตามเทศบัญญัติ'] !== 'ใช่' &&
-            p['โครงการตามข้อบัญญัติ_ผ02_1'] !== 'ใช่' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'เทศบัญญัติงบประมาณรายจ่าย' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'เทศบัญญัติงบประมาณรายจ่ายประจำปี'
-          ) return false;
-        } else if (filterProjectType === 'เงินสะสม (จ่ายขาดเงินสะสม)') {
-          if (
-            p['โครงการอนุมัติจากเงินสะสม'] !== 'ใช่' &&
-            p['โครงการเงินสะสม'] !== 'ใช่' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'เงินสะสม (จ่ายขาดเงินสะสม)' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'เงินสะสม(จ่ายขาดเงินสะสม)'
-          ) return false;
-        } else if (filterProjectType === 'เงินอุดหนุนเฉพาะกิจ') {
-          if (
-            p['แหล่งที่มาของงบประมาณ'] !== 'เงินอุดหนุนเฉพาะกิจ' &&
-            p['ประเภทโครงการ'] !== 'เงินอุดหนุนเฉพาะกิจ'
-          ) return false;
-        } else if (filterProjectType === 'โอนเพิ่ม/โอนลด/ตั้งจ่ายเป็นรายการใหม่') {
-          if (
-            p['โครงการอนุมัติจากโอนเปลี่ยนแปลง'] !== 'ใช่' &&
-            p['โครงการขออนุมัติโอนเปลี่ยนแปลง'] !== 'ใช่' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'โอนเพิ่ม/โอนลด/ตั้งจ่ายเป็นรายการใหม่' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'โอนตั้งจ่ายเป็นรายการใหม่' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'โอนเพิ่ม /โอนลด /โอนตั้งจ่ายเป็นรายการใหม่'
-          ) return false;
-        } else if (filterProjectType === 'เงินอุดหนุนจาก อบจ. ขอนแก่น') {
-          if (
-            p['โครงการอนุมัติจากอบจ'] !== 'ใช่' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'เงินอุดหนุนจาก อบจ. ขอนแก่น' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'เงินอุดหนุน จาก อบจ. ขอนแก่น' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'เงินอุดหนุน จาก อบจ.ขอนแก่น'
-          ) return false;
-        } else if (filterProjectType === 'งบประมาณสนับสนุนจากหน่วยงานอื่น') {
-          if (
-            p['โครงการอนุมัติจากหน่วยงานอื่น'] !== 'ใช่' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'งบประมาณสนับสนุนจากหน่วยงานอื่น' &&
-            p['แหล่งที่มาของงบประมาณ'] !== 'งบประมาณสนับสนุนจากส่วนราชการอื่น'
-          ) return false;
-        }
-      }
-
-      // 6. Approval Status Radio Buttons (( ) โครงการที่อนุมัติแล้ว / (•) โครงการที่ยังไม่อนุมัติ)
-      const approved = isProjectApproved(p);
-      if (approvalStatusRadio === 'approved' && !approved) return false;
-      if (approvalStatusRadio === 'unapproved' && approved) return false;
-
       return true;
     });
-  }, [
-    projects,
-    selectedFiscalYear,
-    filterStrategy,
-    filterProjectName,
-    filterBudget,
-    filterProjectType,
-    approvalStatusRadio,
-    targetYear
-  ]);
+  }, [projects, filterCriteria]);
 
-  // Paginated Projects
-  const paginatedProjects = useMemo(() => {
-    if (pageSize >= 999 || pageSize === 0) return filteredProjects;
-    const startIndex = (currentPage - 1) * pageSize;
-    return filteredProjects.slice(startIndex, startIndex + pageSize);
-  }, [filteredProjects, currentPage, pageSize]);
-
-  // Map each project ID to its promulgated plan batch (if any)
-  const promulgatedProjectMap = useMemo(() => {
-    const map = new Map<number, PlanApproval>();
-    (approvals || []).forEach((a) => {
-      if (a['สถานะการประกาศ'] === 'อนุมัติ' || a['สถานะการประกาศ'] === 'ประกาศใช้แล้ว' || !a['สถานะการประกาศ']) {
-        const ids = String(a.ProjectIDs || '')
-          .split(',')
-          .filter(Boolean)
-          .map((s) => Number(s.trim()));
-        ids.forEach((id) => {
-          if (!map.has(id)) {
-            map.set(id, a);
-          }
-        });
-      }
-    });
-    return map;
-  }, [approvals]);
-
-  // Group Projects by Strategy (ประเด็นการพัฒนา / ยุทธศาสตร์)
-  const groupedProjects = useMemo(() => {
-    const map = new Map<string, Project[]>();
-
-    filteredProjects.forEach((p) => {
-      const strat = p['ประเด็นการพัฒนา'] || 'ยุทธศาสตร์อื่นๆ / ยังไม่ระบุ';
-      if (!map.has(strat)) {
-        map.set(strat, []);
-      }
-      map.get(strat)!.push(p);
-    });
-
-    const sortedEntries = Array.from(map.entries()).sort(([a], [b]) => {
-      const idxA = STANDARD_STRATEGIC_ISSUES.indexOf(a);
-      const idxB = STANDARD_STRATEGIC_ISSUES.indexOf(b);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return a.localeCompare(b, 'th');
-    });
-
-    return sortedEntries.map(([strategyName, items]) => {
-      const totalPlanned = items.reduce(
-        (sum, item) => {
-          if (selectedFiscalYear === 'all') {
-            return sum + YEARS.reduce((ySum, yr) => ySum + (Number(item[`งบประมาณ ${yr}` as keyof Project]) || 0), 0);
-          }
-          return sum + (Number(item[`งบประมาณ ${targetYear}` as keyof Project]) || 0);
-        },
-        0
-      );
-      const totalApproved = items.reduce(
-        (sum, item) => sum + (Number(item['งบประมาณที่อนุมัติ']) || 0),
-        0
-      );
-      const approvedCount = items.filter(isProjectApproved).length;
-
-      return {
-        strategyName,
-        items,
-        totalPlanned,
-        totalApproved,
-        totalBalance: Math.max(0, totalPlanned - totalApproved),
-        approvedCount,
-        unapprovedCount: items.length - approvedCount
-      };
-    });
-  }, [filteredProjects, targetYear, selectedFiscalYear]);
-
-  // Global KPIs for view
-  const overallStats = useMemo(() => {
+  // Calculations for summary banner
+  const stats = useMemo(() => {
     const totalCount = filteredProjects.length;
-    const approvedCount = filteredProjects.filter(isProjectApproved).length;
-    const unapprovedCount = totalCount - approvedCount;
-    const totalPlanned = filteredProjects.reduce(
-      (sum, p) => {
-        if (selectedFiscalYear === 'all') {
-          return sum + YEARS.reduce((ySum, yr) => ySum + (Number(p[`งบประมาณ ${yr}` as keyof Project]) || 0), 0);
-        }
-        return sum + (Number(p[`งบประมาณ ${targetYear}` as keyof Project]) || 0);
-      },
-      0
-    );
-    const totalApproved = filteredProjects.reduce(
-      (sum, p) => sum + (Number(p['งบประมาณที่อนุมัติ']) || 0),
-      0
-    );
-    const totalBalance = Math.max(0, totalPlanned - totalApproved);
+    const approvedCount = filteredProjects.filter((p) => p.status === 'approved').length;
+    const pendingCount = totalCount - approvedCount;
+
+    const totalPlanBudget = filteredProjects.reduce((sum, p) => sum + (p.budgetPlan || 0), 0);
+    const totalApprovedBudget = filteredProjects.reduce((sum, p) => sum + (p.budgetApproved || 0), 0);
+    const remainingBudget = totalPlanBudget - totalApprovedBudget;
 
     return {
       totalCount,
       approvedCount,
-      unapprovedCount,
-      totalPlanned,
-      totalApproved,
-      totalBalance
+      pendingCount,
+      totalPlanBudget,
+      totalApprovedBudget,
+      remainingBudget
     };
-  }, [filteredProjects, targetYear, selectedFiscalYear]);
+  }, [filteredProjects]);
 
-  // =========================================================================
-  // 3. MODAL: เปิดฟอร์ม 'เพิ่มอนุมัติงบประมาณ' (เมื่อกดปุ่ม [+ อนุมัติข้อมูล])
-  // =========================================================================
-  const openApprovalFormModal = (p: Project) => {
-    setApprovalModalProject(p);
-    setFormProjectName(p['ชื่อโครงการตามข้อบัญญัติ'] || p['ชื่อโครงการ']);
-
-    const todayDate = new Date().toISOString().split('T')[0];
-    setFormApprovalDate(p['วันที่อนุมัติงบประมาณ'] || p['วันที่บันทึก']?.split(' ')[0] || todayDate);
-
-    // Single Dropdown value for e-LAAS approval type
-    let initialType = 'เทศบัญญัติงบประมาณรายจ่าย';
-    if (
-      p['โครงการอนุมัติจากเงินสะสม'] === 'ใช่' ||
-      p['โครงการเงินสะสม'] === 'ใช่' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'เงินสะสม (จ่ายขาดเงินสะสม)' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'เงินสะสม(จ่ายขาดเงินสะสม)'
-    ) {
-      initialType = 'เงินสะสม (จ่ายขาดเงินสะสม)';
-    } else if (
-      p['แหล่งที่มาของงบประมาณ'] === 'เงินอุดหนุนเฉพาะกิจ' ||
-      p['ประเภทโครงการ'] === 'เงินอุดหนุนเฉพาะกิจ'
-    ) {
-      initialType = 'เงินอุดหนุนเฉพาะกิจ';
-    } else if (
-      p['โครงการอนุมัติจากโอนเปลี่ยนแปลง'] === 'ใช่' ||
-      p['โครงการขออนุมัติโอนเปลี่ยนแปลง'] === 'ใช่' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'โอนเพิ่ม/โอนลด/ตั้งจ่ายเป็นรายการใหม่' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'โอนตั้งจ่ายเป็นรายการใหม่'
-    ) {
-      initialType = 'โอนเพิ่ม/โอนลด/ตั้งจ่ายเป็นรายการใหม่';
-    } else if (
-      p['โครงการอนุมัติจากอบจ'] === 'ใช่' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'เงินอุดหนุนจาก อบจ. ขอนแก่น' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'เงินอุดหนุน จาก อบจ. ขอนแก่น' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'เงินอุดหนุน จาก อบจ.ขอนแก่น'
-    ) {
-      initialType = 'เงินอุดหนุนจาก อบจ. ขอนแก่น';
-    } else if (
-      p['โครงการอนุมัติจากหน่วยงานอื่น'] === 'ใช่' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'งบประมาณสนับสนุนจากหน่วยงานอื่น' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'งบประมาณสนับสนุนจากส่วนราชการอื่น'
-    ) {
-      initialType = 'งบประมาณสนับสนุนจากหน่วยงานอื่น';
-    } else if (
-      p['โครงการอนุมัติตามเทศบัญญัติ'] === 'ใช่' ||
-      p['โครงการตามข้อบัญญัติ_ผ02_1'] === 'ใช่' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'เทศบัญญัติงบประมาณรายจ่าย' ||
-      p['แหล่งที่มาของงบประมาณ'] === 'เทศบัญญัติงบประมาณรายจ่ายประจำปี'
-    ) {
-      initialType = 'เทศบัญญัติงบประมาณรายจ่าย';
-    }
-    setFormApprovalType(initialType);
-
-    // Budget Source (use exact source from project or fallback to initialType)
-    const exactSource = p['แหล่งที่มาของงบประมาณ'];
-    if (exactSource && (ELAAS_BUDGET_SOURCES as readonly string[]).includes(exactSource)) {
-      setFormBudgetSource(exactSource);
-    } else {
-      setFormBudgetSource(initialType);
-    }
-
-    // Approved Amount
-    const currentApproved = Number(p['งบประมาณที่อนุมัติ']) || 0;
-    const plannedForYear = Number(p[`งบประมาณ ${targetYear}` as keyof Project]) || 0;
-    setFormApprovedAmount(currentApproved > 0 ? currentApproved : (plannedForYear > 0 ? plannedForYear : ''));
-
-    setFormNote(p['การอ้างอิงแผน'] || `อนุมัติตามเทศบัญญัติงบประมาณรายจ่าย ประจำปี พ.ศ. ${targetYear}`);
+  const handleResetFilter = () => {
+    setFilterCriteria({
+      year: '2571',
+      planStrategy: '',
+      budgetSource: '',
+      searchKeyword: '',
+      budgetAmount: '',
+      status: 'all'
+    });
   };
 
-  // Save Modal Form
-  const handleSaveApprovalForm = () => {
-    if (!approvalModalProject || !onSaveProject) return;
-
-    const approvedAmt = formApprovedAmount === '' ? 0 : Number(formApprovedAmount);
-
-    const isOrdinance = formApprovalType === 'เทศบัญญัติงบประมาณรายจ่าย';
-    const isAccumulated = formApprovalType === 'เงินสะสม (จ่ายขาดเงินสะสม)';
-    const isSpecialGrant = formApprovalType === 'เงินอุดหนุนเฉพาะกิจ';
-    const isTransfer = formApprovalType === 'โอนเพิ่ม/โอนลด/ตั้งจ่ายเป็นรายการใหม่';
-    const isPAO = formApprovalType === 'เงินอุดหนุนจาก อบจ. ขอนแก่น';
-    const isOther = formApprovalType === 'งบประมาณสนับสนุนจากหน่วยงานอื่น';
-
-    onSaveProject({
-      ID: approvalModalProject.ID,
-      'ชื่อโครงการตามข้อบัญญัติ': formProjectName.trim() || approvalModalProject['ชื่อโครงการ'],
-      'วันที่อนุมัติงบประมาณ': formApprovalDate,
-      'แหล่งที่มาของงบประมาณ': formBudgetSource,
-      'งบประมาณที่อนุมัติ': approvedAmt,
-      'สถานะงบประมาณ': approvedAmt > 0
-        ? 'ได้รับการจัดสรรงบประมาณแล้ว (มีงบพร้อมใช้)'
-        : 'ได้รับการจัดสรรงบประมาณแล้ว (มีงบพร้อมใช้)',
-      'โครงการอนุมัติตามเทศบัญญัติ': isOrdinance ? 'ใช่' : 'ไม่ใช่',
-      'โครงการอนุมัติจากเงินสะสม': isAccumulated ? 'ใช่' : 'ไม่ใช่',
-      'โครงการอนุมัติจากโอนเปลี่ยนแปลง': isTransfer ? 'ใช่' : 'ไม่ใช่',
-      'โครงการอนุมัติจากอบจ': isPAO ? 'ใช่' : 'ไม่ใช่',
-      'โครงการอนุมัติจากหน่วยงานอื่น': (isOther || isSpecialGrant) ? 'ใช่' : 'ไม่ใช่',
-      'โครงการตามข้อบัญญัติ_ผ02_1': isOrdinance ? 'ใช่' : 'ไม่ใช่',
-      'โครงการตามแผนการดำเนินงาน_ผด02': 'ใช่',
-      'การอ้างอิงแผน': formNote.trim()
+  const handleShowAll = () => {
+    setFilterCriteria({
+      year: 'all',
+      planStrategy: '',
+      budgetSource: '',
+      searchKeyword: '',
+      budgetAmount: '',
+      status: 'all'
     });
+  };
 
-    setApprovalModalProject(null);
+  const handleExportCSV = () => {
+    const headers = [
+      'ID',
+      'รหัสโครงการเดิม',
+      'ประเด็นการพัฒนา',
+      'ชื่อโครงการ',
+      'แผนงาน',
+      'งบตามแผน (บาท)',
+      'แหล่งที่มาของงบประมาณ',
+      'งบประมาณที่อนุมัติ (บาท)',
+      'วันที่อนุมัติ',
+      'สถานะ',
+      'หน่วยงานรับผิดชอบ'
+    ];
+
+    const rows = filteredProjects.map((p, idx) => [
+      `"${getProjectDisplayId(p, p.orderNumber || idx + 1)}"`,
+      `"${p.code}"`,
+      `"${p.planStrategy}"`,
+      `"${p.name}"`,
+      `"${p.planCategory}"`,
+      p.budgetPlan,
+      `"${p.budgetSource}"`,
+      p.budgetApproved,
+      `"${p.approvedDate}"`,
+      `"${p.status === 'approved' ? 'อนุมัติแล้ว' : 'ยังไม่อนุมัติงบ'}"`,
+      `"${p.department}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `งบประมาณแผนพัฒนาเทศบาลเมืองศิลา_${filterCriteria.year}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowExportMenu(false);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
-    <div id="budget-approval-view" className="space-y-4">
-      {/* ========================================================================= */}
-      {/* SECTION 1: SEARCH FILTER SECTION (ตามรูปที่ 1 และเงื่อนไขข้อ 1)              */}
-      {/* ========================================================================= */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-        {/* Row 1: Main Header Bar (บรรทัดบนสุด: ไอคอนและข้อความขนานชิดซ้าย) */}
-        <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2.5">
-            {onToggleMobile && (
-              <button
-                onClick={onToggleMobile}
-                className="lg:hidden p-1.5 rounded-lg bg-emerald-900/50 text-white hover:bg-emerald-900 cursor-pointer"
-                aria-label="เปิดเมนู"
+    <div className="flex-1 flex flex-col bg-slate-50 h-full min-h-0 overflow-hidden">
+      {/* Top Banner Bar */}
+      <header
+        id="top-banner"
+        className="bg-[#055740] text-white px-4 py-2 sm:px-6 shadow-sm flex items-center gap-2.5 shrink-0"
+      >
+        <div className="w-7 h-7 rounded-lg bg-[#086d50] flex items-center justify-center shrink-0">
+          <Landmark className="w-4 h-4 text-emerald-100" />
+        </div>
+        <h1 className="text-xs sm:text-sm font-bold tracking-tight">
+          ระบบอนุมัติงบประมาณ | ระบบแผนพัฒนาเทศบาลเมืองศิลา | เทศบาลเมืองศิลา จ.ขอนแก่น
+        </h1>
+      </header>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3">
+        {/* Filter Card */}
+        <section
+          id="filter-panel"
+          className="bg-white rounded-xl border border-slate-200 shadow-xs p-3 sm:p-4 space-y-3"
+        >
+          {/* Row 1: ปีงบประมาณ */}
+          <div className="flex items-center gap-3">
+            <label className="text-xs sm:text-sm font-semibold text-slate-700 whitespace-nowrap">
+              ปีงบประมาณ:
+            </label>
+            <div className="w-44">
+              <select
+                id="select-fiscal-year"
+                value={filterCriteria.year}
+                onChange={(e) => setFilterCriteria({ ...filterCriteria, year: e.target.value })}
+                className="w-full text-xs sm:text-sm border border-slate-300 rounded-lg px-3 py-1.5 bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
               >
-                <Menu className="w-4 h-4" />
-              </button>
-            )}
-            <div className="p-1.5 rounded-lg bg-emerald-900/60 border border-emerald-500/30">
-              <Landmark className="w-4 h-4 text-emerald-300" />
-            </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold leading-tight flex items-center gap-2 flex-wrap">
-                <span>ระบบอนุมัติงบประมาณ</span>
-                <span className="text-emerald-300 font-normal">|</span>
-                <span className="text-emerald-100 text-xs sm:text-sm font-semibold">
-                  ระบบแผนพัฒนาเทศบาลเมืองศิลา | เทศบาลเมืองศิลา จ.ขอนแก่น
-                </span>
-              </h2>
+                <option value="2571">พ.ศ. 2571</option>
+                <option value="2572">พ.ศ. 2572</option>
+                <option value="2573">พ.ศ. 2573</option>
+                <option value="2574">พ.ศ. 2574</option>
+                <option value="2575">พ.ศ. 2575</option>
+                <option value="all">-- ทุกปีงบประมาณ --</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        {/* Standardized Filter Component */}
-        <StandardFilterBar
-          selectedYear={selectedFiscalYear}
-          onYearChange={(yr) => setSelectedFiscalYear(yr)}
-          allYearsLabel="ทุกปี (2571-2575)"
-          issueLabel="ประเด็นการพัฒนา"
-          issueValue={filterStrategy}
-          onIssueChange={(val) => setFilterStrategy(val)}
-          issueOptions={strategyList}
-          issueAllLabel="-- ทุกประเด็นการพัฒนา --"
-          departmentLabel="แหล่งที่มาของงบประมาณ"
-          departmentValue={filterProjectType}
-          onDepartmentChange={(val) => setFilterProjectType(val)}
-          departmentOptions={ELAAS_BUDGET_SOURCES}
-          departmentAllLabel="-- เลือกแหล่งที่มาของงบประมาณ --"
-          searchLabel="ชื่อโครงการ"
-          searchValue={filterProjectName}
-          onSearchChange={(val) => setFilterProjectName(val)}
-          searchPlaceholder="ค้นหาชื่อโครงการ..."
-          budgetLabel="งบประมาณ (บาท)"
-          budgetValue={filterBudget}
-          onBudgetChange={(val) => setFilterBudget(val)}
-          budgetPlaceholder="ระบุจำนวนเงิน..."
-          onSearch={() => {}}
-          onShowAll={handleShowAll}
-          onReset={handleResetFilters}
-          extraControlsCenter={
-            <div className="flex items-center gap-3.5 text-xs font-medium text-slate-700">
-              <span className="text-slate-500 text-[11px]">สถานะ:</span>
-              <label className="inline-flex items-center gap-1.5 cursor-pointer hover:text-emerald-700">
-                <input
-                  type="radio"
-                  name="approvalRadio"
-                  checked={approvalStatusRadio === 'all'}
-                  onChange={() => setApprovalStatusRadio('all')}
-                  className="text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"
-                />
-                <span>ทั้งหมด</span>
+          {/* Row 2: Filters Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                ประเด็นการพัฒนา
               </label>
-
-              <label className="inline-flex items-center gap-1.5 cursor-pointer hover:text-emerald-700">
-                <input
-                  type="radio"
-                  name="approvalRadio"
-                  checked={approvalStatusRadio === 'approved'}
-                  onChange={() => setApprovalStatusRadio('approved')}
-                  className="text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"
-                />
-                <span className="text-emerald-700 font-semibold">อนุมัติแล้ว</span>
-              </label>
-
-              <label className="inline-flex items-center gap-1.5 cursor-pointer hover:text-emerald-700">
-                <input
-                  type="radio"
-                  name="approvalRadio"
-                  checked={approvalStatusRadio === 'unapproved'}
-                  onChange={() => setApprovalStatusRadio('unapproved')}
-                  className="text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5 cursor-pointer"
-                />
-                <span className="text-amber-700 font-semibold">ยังไม่อนุมัติ</span>
-              </label>
+              <select
+                id="filter-strategy"
+                value={filterCriteria.planStrategy}
+                onChange={(e) =>
+                  setFilterCriteria({ ...filterCriteria, planStrategy: e.target.value })
+                }
+                title={filterCriteria.planStrategy || '-- ทุกประเด็นการพัฒนา --'}
+                className="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white text-slate-700 truncate focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="">-- ทุกประเด็นการพัฒนา --</option>
+                {DEVELOPMENT_STRATEGIES.map((s, idx) => (
+                  <option key={idx} value={s} title={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </div>
-          }
-          onExportExcel={() => exportProjects(filteredProjects, 'excel', `รายงานอนุมัติงบประมาณ_${selectedFiscalYear}`)}
-          onExportCsv={() => exportProjects(filteredProjects, 'csv', `รายงานอนุมัติงบประมาณ_${selectedFiscalYear}`)}
-          exportItemsCount={filteredProjects.length}
-          onPrint={() => window.print()}
-          actionButton={
-            <button
-              type="button"
-              onClick={() => setIsBalanceReportOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-2xs hover:shadow-xs transition cursor-pointer"
-              title="ดูและพิมพ์รายงานยอดงบประมาณคงเหลือ"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>รายงานยอดงบประมาณคงเหลือ</span>
-            </button>
-          }
-        />
 
-        {/* Quick KPI Stat strip */}
-        <div className="px-4 py-2.5 bg-emerald-50/50 text-xs border-t border-slate-200 flex items-center justify-between flex-wrap gap-2 text-slate-600">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span title="จำนวนโครงการที่พบตามเงื่อนไขตัวกรองในปีงบประมาณนี้">
-              พบโครงการตามเงื่อนไข: <strong className="text-slate-900 font-bold">{overallStats.totalCount}</strong> โครงการ
-              <span className="text-[10px] text-slate-400 block sm:inline sm:ml-1 font-normal">
-                ({selectedFiscalYear === 'all' ? 'โครงการทุกปีในแผน' : `โครงการปี ${selectedFiscalYear}`})
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                แหล่งที่มาของงบประมาณ
+              </label>
+              <select
+                id="filter-budget-source"
+                value={filterCriteria.budgetSource}
+                onChange={(e) =>
+                  setFilterCriteria({ ...filterCriteria, budgetSource: e.target.value })
+                }
+                title={filterCriteria.budgetSource || '-- เลือกแหล่งที่มาของงบประมาณ --'}
+                className="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white text-slate-700 truncate focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="">-- เลือกแหล่งที่มาของงบประมาณ --</option>
+                {BUDGET_SOURCES.map((src, idx) => (
+                  <option key={idx} value={src} title={src}>
+                    {src}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                ชื่อโครงการ
+              </label>
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  id="input-search-project"
+                  type="text"
+                  placeholder="ค้นหารหัส ID (เช่น ป.1-โยธา-001), ชื่อโครงการ..."
+                  value={filterCriteria.searchKeyword}
+                  onChange={(e) =>
+                    setFilterCriteria({ ...filterCriteria, searchKeyword: e.target.value })
+                  }
+                  className="w-full text-xs border border-slate-300 rounded-lg pl-8 pr-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                งบประมาณ (บาท)
+              </label>
+              <input
+                id="input-filter-budget"
+                type="text"
+                placeholder="ระบุจำนวนเงิน..."
+                value={filterCriteria.budgetAmount}
+                onChange={(e) =>
+                  setFilterCriteria({ ...filterCriteria, budgetAmount: e.target.value })
+                }
+                className="w-full text-xs border border-slate-300 rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+              </input>
+            </div>
+          </div>
+
+          {/* Row 3: Action Buttons & Radios */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-2 border-t border-slate-100">
+            {/* Left controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                id="btn-filter-search"
+                type="button"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#059669] hover:bg-[#047857] text-white text-xs font-medium rounded-lg shadow-xs cursor-pointer transition-colors"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>ค้นหา</span>
+              </button>
+
+              <button
+                id="btn-filter-all"
+                type="button"
+                onClick={handleShowAll}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-slate-500" />
+                <span>แสดงทั้งหมด</span>
+              </button>
+
+              <button
+                id="btn-filter-reset"
+                type="button"
+                onClick={handleResetFilter}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-amber-50 text-amber-600 border border-amber-300 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
+                <span>เริ่มใหม่</span>
+              </button>
+
+              {/* Radio buttons: สถานะ */}
+              <div className="flex items-center gap-3 pl-3 text-xs text-slate-700">
+                <span className="font-semibold text-slate-600">สถานะ:</span>
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status_filter"
+                    checked={filterCriteria.status === 'all'}
+                    onChange={() => setFilterCriteria({ ...filterCriteria, status: 'all' })}
+                    className="text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>ทั้งหมด</span>
+                </label>
+
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status_filter"
+                    checked={filterCriteria.status === 'approved'}
+                    onChange={() => setFilterCriteria({ ...filterCriteria, status: 'approved' })}
+                    className="text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>อนุมัติแล้ว</span>
+                </label>
+
+                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status_filter"
+                    checked={filterCriteria.status === 'pending'}
+                    onChange={() => setFilterCriteria({ ...filterCriteria, status: 'pending' })}
+                    className="text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>ยังไม่อนุมัติ</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Right controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <button
+                  id="btn-export-dropdown"
+                  type="button"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#064e3b] hover:bg-[#053d2e] text-white text-xs font-medium rounded-lg shadow-xs transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>ส่งออกข้อมูล {stats.totalCount}</span>
+                  <span className="text-[10px]">▼</span>
+                </button>
+
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 text-xs text-slate-700">
+                    <button
+                      onClick={handleExportCSV}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                      <span>ดาวน์โหลดเป็น CSV</span>
+                    </button>
+                    <button
+                      onClick={handlePrint}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4 text-blue-600" />
+                      <span>พิมพ์หน้ารายการ (PDF)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                id="btn-print-report"
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                <span>พิมพ์รายงาน</span>
+              </button>
+
+              <button
+                id="btn-remaining-budget-report"
+                type="button"
+                onClick={onOpenRemainingBudgetReport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#059669] hover:bg-[#047857] text-white text-xs font-medium rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>รายงานยอดงบประมาณคงเหลือ</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Summary Stats Strip */}
+        <section
+          id="summary-stats-strip"
+          className="bg-[#f8fafc] border border-slate-200 rounded-xl px-4 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+        >
+          {/* Left stats */}
+          <div className="flex flex-wrap items-center gap-3 text-slate-700">
+            <span>
+              พบโครงการตามเงื่อนไข: <strong className="text-slate-900">{stats.totalCount} โครงการ</strong>{' '}
+              <span className="text-slate-500">
+                ({filterCriteria.year === 'all' ? 'ทุกปี' : `โครงการปี ${filterCriteria.year}`})
               </span>
             </span>
-            <span className="text-slate-300 hidden sm:inline">•</span>
-            <span title="โครงการที่ได้รับการบรรจุ/จัดสรรงบประมาณจริงแล้ว">
-              อนุมัติงบแล้ว: <strong className="text-emerald-700 font-bold">{overallStats.approvedCount}</strong> โครงการ
-              <span className="text-[10px] text-emerald-600/90 block sm:inline sm:ml-1 font-normal">(มีงบพร้อมใช้)</span>
+            <span className="text-slate-300">•</span>
+            <span>
+              อนุมัติงบแล้ว:{' '}
+              <strong className="text-emerald-700">{stats.approvedCount} โครงการ</strong>{' '}
+              <span className="text-emerald-600">(มีงบพร้อมใช้)</span>
             </span>
-            <span className="text-slate-300 hidden sm:inline">•</span>
-            <span title="โครงการในแผนที่ยังไม่ได้รับการจัดสรรงบประมาณในข้อบัญญัติ/เทศบัญญัติ">
-              ยังไม่อนุมัติงบ: <strong className="text-amber-700 font-bold">{overallStats.unapprovedCount}</strong> โครงการ
-              <span className="text-[10px] text-amber-600/90 block sm:inline sm:ml-1 font-normal">(รอจัดสรรงบ)</span>
+            <span className="text-slate-300">•</span>
+            <span>
+              ยังไม่อนุมัติ:{' '}
+              <strong className="text-amber-700">{stats.pendingCount} โครงการ</strong>{' '}
+              <span className="text-amber-600">(รอจัดสรรงบ)</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-4 font-mono font-bold flex-wrap">
-            <div className="text-right">
-              <div className="text-[10px] text-slate-500 font-sans font-normal">
-                งบตามแผน ({selectedFiscalYear === 'all' ? 'รวม 5 ปี' : `ปี ${selectedFiscalYear}`})
-              </div>
-              <div className="text-slate-800">฿{formatMoneyNoDec(overallStats.totalPlanned)}</div>
+          {/* Right stats */}
+          <div className="flex flex-wrap items-center gap-4 font-mono font-medium">
+            <div>
+              <span className="text-slate-500 text-[11px] mr-1">
+                งบตามแผน ({filterCriteria.year === 'all' ? 'รวม' : `ปี ${filterCriteria.year}`}):
+              </span>
+              <strong className="text-slate-900 text-xs">
+                ฿{stats.totalPlanBudget.toLocaleString()}
+              </strong>
             </div>
-            <span className="text-slate-300 hidden sm:inline">|</span>
-            <div className="text-right">
-              <div className="text-[10px] text-emerald-600 font-sans font-normal">อนุมัติจัดสรรจริง</div>
-              <div className="text-emerald-700">฿{formatMoneyNoDec(overallStats.totalApproved)}</div>
+
+            <div className="border-l border-slate-300 pl-3">
+              <span className="text-emerald-600 text-[11px] mr-1">อนุมัติจัดสรรจริง:</span>
+              <strong className="text-emerald-700 text-xs">
+                ฿{stats.totalApprovedBudget.toLocaleString()}
+              </strong>
             </div>
-            <span className="text-slate-300 hidden sm:inline">|</span>
-            <div className="text-right">
-              <div className="text-[10px] text-indigo-600 font-sans font-normal">งบคงเหลือตามแผน</div>
-              <div className="text-indigo-700">฿{formatMoneyNoDec(overallStats.totalBalance)}</div>
+
+            <div className="border-l border-slate-300 pl-3">
+              <span className="text-blue-600 text-[11px] mr-1">งบคงเหลือตามแผน:</span>
+              <strong className="text-blue-700 text-xs">
+                ฿{stats.remainingBudget.toLocaleString()}
+              </strong>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* ========================================================================= */}
-      {/* SECTION 2: UNIFIED TABLE OF PROJECTS (ตารางเดียวต่อเนื่อง ไม่แบ่ง Group)     */}
-      {/* ========================================================================= */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-        {filteredProjects.length === 0 ? (
-          <div className="p-12 text-center">
-            <Coins className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <h3 className="text-sm font-bold text-slate-700">ไม่พบข้อมูลโครงการตามเงื่อนไขการค้นหา</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              ลองปรับเปลี่ยนตัวกรอง หรือกดปุ่ม "แสดงทั้งหมด" หรือ "เริ่มค้นหาใหม่" ด้านบน
-            </p>
-            <button
-              type="button"
-              onClick={handleShowAll}
-              className="mt-3 px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 cursor-pointer shadow-2xs"
-            >
-              แสดงโครงการทั้งหมด
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="sticky top-0 z-20">
-                <tr className="bg-[#065F46] text-white font-bold border-b border-emerald-800 text-[11px] select-none shadow-xs">
-                  {/* 1. ลำดับ */}
-                  <th className="py-2.5 px-2.5 w-12 text-center border-r border-white/15 font-bold text-white">ลำดับ</th>
-
-                  {/* 2. ประเด็นการพัฒนา */}
-                  <th className="py-2.5 px-3 min-w-[170px] max-w-[220px] border-r border-white/15 font-bold text-white text-center">ประเด็นการพัฒนา</th>
-
-                  {/* 3. อนุมัติงบประมาณ (ปุ่มกด) */}
-                  <th className="py-2.5 px-2.5 w-28 text-center bg-emerald-800/80 text-emerald-200 border-r border-white/15 font-bold">
+        {/* Data Table */}
+        <section
+          id="budget-approval-table-wrapper"
+          className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden"
+        >
+          <div className="overflow-auto max-h-[60vh]">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
+              <thead>
+                <tr className="bg-[#054e3b] text-white text-xs font-semibold tracking-wide sticky top-0 z-10">
+                  <th className="py-3 px-3 text-center w-28 border-r border-[#075f48] font-medium">ID</th>
+                  <th className="py-3 px-4 w-52 border-r border-[#075f48]">ประเด็นการพัฒนา</th>
+                  <th className="py-3 px-3 text-center w-32 border-r border-[#075f48]">
                     อนุมัติงบประมาณ
                   </th>
-
-                  {/* 4. ชื่อโครงการ */}
-                  <th className="py-2.5 px-3 min-w-[240px] border-r border-white/15 font-bold text-white text-center">ชื่อโครงการ</th>
-
-                  {/* 5. งบตามแผนพัฒนาท้องถิ่น */}
-                  <th className="py-2.5 px-3 text-center w-28 whitespace-nowrap border-r border-white/15 font-bold text-white">
+                  <th className="py-3 px-4 border-r border-[#075f48]">ชื่อโครงการ</th>
+                  <th className="py-3 px-4 text-right w-36 border-r border-[#075f48]">
                     งบตามแผนพัฒนาท้องถิ่น
                   </th>
-
-                  {/* 6. แหล่งที่มาของงบประมาณ */}
-                  <th className="py-2.5 px-3 min-w-[160px] border-r border-white/15 font-bold text-white text-center">แหล่งที่มาของงบประมาณ</th>
-
-                  {/* 7. งบประมาณที่อนุมัติ */}
-                  <th className="py-2.5 px-3 text-center w-28 text-emerald-200 font-bold whitespace-nowrap border-r border-white/15">
+                  <th className="py-3 px-3 text-center w-36 border-r border-[#075f48]">
+                    แหล่งที่มาของงบประมาณ
+                  </th>
+                  <th className="py-3 px-3 text-right w-32 border-r border-[#075f48]">
                     งบประมาณที่อนุมัติ
                   </th>
-
-                  {/* 8. วันที่อนุมัติ */}
-                  <th className="py-2.5 px-2.5 text-center w-24 whitespace-nowrap border-r border-white/15 font-bold text-white">
+                  <th className="py-3 px-3 text-center w-28 border-r border-[#075f48]">
                     วันที่อนุมัติ
                   </th>
-
-                  {/* 9. สถานะ */}
-                  <th className="py-2.5 px-2.5 text-center w-24 border-r border-white/15 font-bold text-white">สถานะ</th>
-
-                  {/* 10. หน่วยงานรับผิดชอบ */}
-                  <th className="py-2.5 px-3 min-w-[130px] font-bold text-white text-center">หน่วยงานรับผิดชอบ</th>
+                  <th className="py-3 px-3 text-center w-28 border-r border-[#075f48]">สถานะ</th>
+                  <th className="py-3 px-4 text-center w-32 border-r border-[#075f48]">หน่วยงานรับผิดชอบ</th>
+                  <th className="py-3 px-4 text-center w-52">หมายเหตุ / ที่มาในแผน</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginatedProjects.map((project, idx) => {
-                  const plannedBudget = Number(project[`งบประมาณ ${targetYear}` as keyof Project]) || 0;
-                  const approvedBudget = Number(project['งบประมาณที่อนุมัติ']) || 0;
-                  const isApproved = isProjectApproved(project);
-                  const devIssue = project['ประเด็นการพัฒนา'] || project['ยุทธศาสตร์'] || '-';
-                  const globalIdx = (pageSize >= 999 || pageSize === 0 ? 0 : (currentPage - 1) * pageSize) + idx;
+              <tbody className="divide-y divide-slate-200 text-xs text-slate-700">
+                {filteredProjects.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="py-12 text-center text-slate-400">
+                      ไม่พบข้อมูลโครงการตามเงื่อนไขที่ระบุ
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProjects.map((project, index) => {
+                    const isApproved = project.status === 'approved';
+                    return (
+                      <tr
+                        key={project.id}
+                        onClick={() => onOpenProjectDetail?.(project)}
+                        className="hover:bg-emerald-50/40 transition-colors group cursor-pointer"
+                        title="กดที่แถบโครงการเพื่อเปิดดูข้อมูล (Read-Only)"
+                      >
+                        {/* 1. ID */}
+                        <td className="py-3.5 px-3 text-center w-28 font-mono font-medium text-emerald-800 whitespace-nowrap bg-emerald-50/20 border-r border-slate-100">
+                          {getProjectDisplayId(project, project.orderNumber || index + 1)}
+                        </td>
 
-                  return (
-                    <tr
-                      key={project.ID}
-                      className={`hover:bg-emerald-50/40 transition ${
-                        isApproved ? 'bg-emerald-50/15' : ''
-                      }`}
-                    >
-                      {/* 1. ลำดับ */}
-                      <td className="py-2.5 px-2.5 text-center text-slate-500 font-mono font-medium">
-                        {globalIdx + 1}
-                      </td>
+                        {/* 2. ประเด็นการพัฒนา */}
+                        <td className="py-3.5 px-4 text-slate-700 leading-relaxed">
+                          <span className="line-clamp-2" title={project.planStrategy}>
+                            {project.planStrategy}
+                          </span>
+                        </td>
 
-                      {/* 2. ประเด็นการพัฒนา (สีเทาเข้ม #4B5563 / Badge กะทัดรัด) */}
-                      <td className="py-2.5 px-3">
-                        <span
-                          className="inline-block text-[11px] text-[#4B5563] bg-slate-100 hover:bg-slate-200/80 px-2 py-0.5 rounded border border-slate-200/80 font-medium leading-relaxed"
-                          title={devIssue}
+                        {/* 3. อนุมัติงบประมาณ / การจัดการ */}
+                        <td
+                          className="py-3.5 px-3 text-center"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {devIssue}
-                        </span>
-                      </td>
+                          {isApproved ? (
+                            <div className="inline-flex items-center justify-center gap-1.5 relative">
+                              {/* Read-only Badge: สไตล์สีเขียว bg-emerald-50 text-emerald-700 border-emerald-200 */}
+                              <span
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md select-none shadow-2xs"
+                                title="รายการนี้ได้รับการอนุมัติงบประมาณแล้ว (อ่านอย่างเดียว)"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>อนุมัติแล้ว</span>
+                              </span>
 
-                      {/* 3. อนุมัติงบประมาณ (ปุ่มกด) */}
-                      <td className="py-2 px-2.5 text-center bg-emerald-50/30 border-x border-emerald-100">
-                        <button
-                          type="button"
-                          onClick={() => openApprovalFormModal(project)}
-                          className="inline-flex items-center justify-center gap-1 w-full px-2 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-2xs hover:shadow-xs transition cursor-pointer whitespace-nowrap"
-                          title="คลิกเพื่อเปิดฟอร์มอนุมัติงบประมาณ"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>อนุมัติข้อมูล</span>
-                        </button>
-                      </td>
+                              {/* ระบบปลดล็อกสำหรับ Admin (Action Context Menu) */}
+                              {isAdmin && (
+                                <div className="relative inline-block text-left">
+                                  <button
+                                    type="button"
+                                    id={`btn-action-menu-${project.id}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenActionMenuId(openActionMenuId === project.id ? null : project.id);
+                                    }}
+                                    title="เมนูจัดการ (เฉพาะ Admin)"
+                                    className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
+                                  >
+                                    <MoreVertical className="w-3.5 h-3.5" />
+                                  </button>
 
-                      {/* 4. ชื่อโครงการ */}
-                      <td className="py-2.5 px-3">
-                        <div className="font-semibold text-slate-900 leading-snug">
-                          {project['ชื่อโครงการ']}
-                        </div>
-                        {project['ชื่อโครงการตามข้อบัญญัติ'] && project['ชื่อโครงการตามข้อบัญญัติ'] !== project['ชื่อโครงการ'] && (
-                          <div className="text-[11px] text-emerald-800 font-medium mt-0.5 flex items-center gap-1">
-                            <span className="text-[10px] text-slate-400">ตามเทศบัญญัติ:</span>
-                            <span>{project['ชื่อโครงการตามข้อบัญญัติ']}</span>
-                          </div>
-                        )}
-                        <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                          <span>แผนงาน: {project['แผนงาน'] || '-'}</span>
-                          <span>•</span>
-                          {promulgatedProjectMap.has(project.ID) ? (
-                            <span
-                              className="text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200"
-                              title={`บรรจุในประกาศใช้แผนแล้ว (${promulgatedProjectMap.get(project.ID)!['ประเภท']} ${promulgatedProjectMap.get(project.ID)!['ครั้งที่']})`}
+                                  {openActionMenuId === project.id && (
+                                    <div
+                                      className="absolute left-1/2 -translate-x-1/2 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-left animate-in fade-in zoom-in-95 duration-100"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <div className="px-3 py-1 text-[10px] font-semibold text-slate-400 border-b border-slate-100 uppercase tracking-wider flex items-center gap-1">
+                                        <ShieldAlert className="w-3 h-3 text-emerald-600" />
+                                        <span>สิทธิ์ผู้ดูแลระบบ (Admin)</span>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setOpenActionMenuId(null);
+                                          onOpenProjectDetail?.(project);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                      >
+                                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                        <span>ดูข้อมูลโครงการ (Read-Only)</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        id={`btn-revoke-approval-${project.id}`}
+                                        onClick={() => {
+                                          setOpenActionMenuId(null);
+                                          setRevokingProject(project);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-700 hover:bg-amber-50 transition-colors text-left cursor-pointer font-medium border-t border-slate-100"
+                                      >
+                                        <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                                        <span>ยกเลิกการอนุมัติ</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              id={`btn-approve-${project.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenApprovalModal(project);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-[#059669] hover:bg-[#047857] rounded-md shadow-xs transition-colors cursor-pointer"
                             >
-                              ประกาศใช้แล้ว ({promulgatedProjectMap.get(project.ID)!['ประเภท'] || 'ฉบับแรก'})
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>อนุมัติข้อมูล</span>
+                            </button>
+                          )}
+                        </td>
+
+                        {/* 4. ชื่อโครงการ */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-medium text-slate-900 group-hover:text-emerald-900 leading-tight flex items-center gap-1.5 flex-wrap">
+                            {project.code && (
+                              <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[11px] px-1.5 py-0.5 rounded border border-emerald-200/80">
+                                {project.code}
+                              </span>
+                            )}
+                            <span className="underline-offset-2 group-hover:underline">{project.name}</span>
+                            <Eye className="w-3 h-3 text-slate-400 group-hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-0.5" />
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                            <span>แผนงาน: {project.planCategory}</span>
+                            <span>•</span>
+                            {project.publishStatus === 'pending_publish' ? (
+                              <span className="inline-block bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.2 rounded-full font-medium text-[10px]">
+                                รอจัดรอบประกาศใช้
+                              </span>
+                            ) : project.publishStatus === 'published_additional' ? (
+                              <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.2 rounded-full font-medium text-[10px]">
+                                ประกาศใช้แล้ว (เพิ่มเติม)
+                              </span>
+                            ) : (
+                              <span className="inline-block bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.2 rounded-full font-medium text-[10px]">
+                                ประกาศใช้แล้ว
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 5. งบตามแผนพัฒนาท้องถิ่น */}
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">
+                          {project.budgetPlan > 0
+                            ? `฿${project.budgetPlan.toLocaleString()}`
+                            : '-'}
+                        </td>
+
+                        {/* 6. แหล่งที่มาของงบประมาณ */}
+                        <td className="py-3.5 px-3 text-center text-slate-500 italic">
+                          {project.budgetSource || '- ยังไม่ได้จัดสรร -'}
+                        </td>
+
+                        {/* 7. งบประมาณที่อนุมัติ */}
+                        <td className="py-3.5 px-3 text-right font-mono font-medium">
+                          {isApproved ? (
+                            <span className="text-emerald-700 font-bold">
+                              ฿{project.budgetApproved.toLocaleString()}
                             </span>
                           ) : (
-                            <span
-                              className="text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200"
-                              title="ยังไม่ได้รับการบรรจุในประกาศใช้แผนพัฒนาท้องถิ่น"
-                            >
-                              รอจัดรอบประกาศใช้
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+
+                        {/* 8. วันที่อนุมัติ */}
+                        <td className="py-3.5 px-3 text-center text-slate-600">
+                          {project.approvedDate || '-'}
+                        </td>
+
+                        {/* 9. สถานะ */}
+                        <td className="py-3.5 px-3 text-center">
+                          {isApproved ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>อนุมัติแล้ว</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span>ยังไม่อนุมัติงบ</span>
                             </span>
                           )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* 5. งบตามแผนพัฒนาท้องถิ่น */}
-                      <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-700">
-                        {plannedBudget > 0 ? `฿${formatMoneyNoDec(plannedBudget)}` : '-'}
-                      </td>
+                        {/* 10. หน่วยงานรับผิดชอบ */}
+                        <td className="py-3.5 px-4 text-center font-medium text-slate-700 border-r border-slate-100">
+                          {project.department}
+                        </td>
 
-                      {/* 6. แหล่งที่มาของงบประมาณ */}
-                      <td className="py-2.5 px-3">
-                        {isApproved ? (
-                          <div className="text-slate-800 font-medium flex items-center gap-1">
-                            <Tag className="w-3 h-3 text-emerald-600 shrink-0" />
-                            <span className="truncate">{project['แหล่งที่มาของงบประมาณ'] || ELAAS_BUDGET_SOURCES[0]}</span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-[11px] italic">- ยังไม่ได้จัดสรร -</span>
-                        )}
-                      </td>
-
-                      {/* 7. งบประมาณที่อนุมัติ */}
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
-                        {approvedBudget > 0 ? (
-                          `฿${formatMoneyNoDec(approvedBudget)}`
-                        ) : (
-                          <span className="text-slate-300 font-normal">-</span>
-                        )}
-                      </td>
-
-                      {/* 8. วันที่อนุมัติ */}
-                      <td className="py-2.5 px-2.5 text-center text-slate-600 font-mono text-[11px]">
-                        {project['วันที่อนุมัติงบประมาณ'] || (isApproved ? 'อนุมัติแล้ว' : '-')}
-                      </td>
-
-                      {/* 9. สถานะ */}
-                      <td className="py-2.5 px-2.5 text-center">
-                        {isApproved ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            อนุมัติงบแล้ว
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-300">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            ยังไม่อนุมัติงบ
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 10. หน่วยงานรับผิดชอบ */}
-                      <td className="py-2.5 px-3 text-slate-700 truncate">
-                        {project['หน่วยงานรับผิดชอบหลัก'] || '-'}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        {/* 11. หมายเหตุ / ที่มาในแผน */}
+                        <td className="py-3.5 px-4 text-xs text-slate-700">
+                          {project.planReference ? (
+                            <div className="bg-emerald-50/80 text-emerald-900 border border-emerald-200 rounded-lg p-2 text-[11px] leading-relaxed shadow-2xs">
+                              <div className="font-bold text-emerald-800 flex items-center gap-1.5 mb-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block"></span>
+                                <span>ที่มาในเล่มแผน:</span>
+                              </div>
+                              <div className="text-slate-700 font-medium">
+                                {project.planReference}
+                              </div>
+                            </div>
+                          ) : project.note ? (
+                            <span className="text-slate-500 text-[11px] leading-relaxed">{project.note}</span>
+                          ) : (
+                            <span className="text-slate-400 text-[11px] italic">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
+              {/* แถวสรุปรวมท้ายตาราง (Table Footer) */}
+              <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300 text-xs print:bg-white print:border-black">
+                <tr>
+                  <td colSpan={4} className="py-3 px-4 text-right text-slate-900 font-bold">
+                    รวมทั้งสิ้น ({filteredProjects.length} โครงการ)
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                    ฿{stats.totalPlanBudget.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-center text-slate-400">-</td>
+                  <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700">
+                    ฿{stats.totalApprovedBudget.toLocaleString()}
+                  </td>
+                  <td colSpan={4} className="py-3 px-4 text-left font-mono font-bold text-blue-700">
+                    คงเหลือ: ฿{stats.remainingBudget.toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
-        )}
-
-        {/* Table Footer - Standard Pagination */}
-        {filteredProjects.length > 0 && (
-          <TablePagination
-            currentPage={currentPage}
-            totalItems={filteredProjects.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[10, 20, 50, 100, 999]}
-          />
-        )}
+        </section>
       </div>
 
-      {/* ========================================================================= */}
-      {/* SECTION 3: MODAL ฟอร์ม 'เพิ่มอนุมัติงบประมาณ' (Compact 100% No Scrollbar)     */}
-      {/* ========================================================================= */}
-      {approvalModalProject && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-xs"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setApprovalModalProject(null);
-          }}
-        >
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col my-auto max-h-[90vh]">
-            {/* Modal Header - Reduced height by 40% */}
-            <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white px-4 py-2 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-md bg-emerald-900/60 border border-emerald-500/40">
-                  <Landmark className="w-4 h-4 text-emerald-300" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold leading-tight">
-                    เพิ่มอนุมัติงบประมาณ
-                  </h3>
-                  <p className="text-[10px] text-emerald-200">
-                    ปรับปรุงข้อมูลการอนุมัติงบประมาณรายโครงการ (ตามระบบ e-LAAS / e-Plan)
-                  </p>
-                </div>
+      {/* Modal ยืนยันยกเลิกการอนุมัติ (เฉพาะสิทธิ์ Admin) */}
+      {revokingProject && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="bg-amber-500 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-base">
+                <AlertTriangle className="w-5 h-5 text-amber-100" />
+                <span>ยืนยันยกเลิกการอนุมัติงบประมาณ</span>
               </div>
               <button
                 type="button"
-                onClick={() => setApprovalModalProject(null)}
-                className="p-1 rounded-md hover:bg-emerald-900/50 text-emerald-100 hover:text-white transition cursor-pointer"
+                onClick={() => setRevokingProject(null)}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-amber-600/50 transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body - Tight Spacing & Compact Fields */}
-            <div className="p-3.5 sm:p-4 overflow-y-auto space-y-2 text-xs">
-              {/* 1. แสดงข้อมูลเดิม: ชื่อโครงการ และ งบตามแผน (บาท) (Read-only Info Box) */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 space-y-1">
-                <div className="text-[10px] font-bold text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
-                  <FileText className="w-3 h-3 text-slate-400" />
-                  <span>ข้อมูลเดิมจากแผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575)</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div className="sm:col-span-2">
-                    <span className="text-[10px] text-slate-500 block">ชื่อโครงการ (ตามแผน):</span>
-                    <span className="text-xs font-bold text-slate-900 leading-snug block line-clamp-2">
-                      {approvalModalProject['ชื่อโครงการ']}
-                    </span>
-                    <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-2">
-                      <span>แผนงาน: {approvalModalProject['แผนงาน'] || '-'}</span>
-                      <span>•</span>
-                      <span>หน่วยงาน: {approvalModalProject['หน่วยงานรับผิดชอบหลัก'] || '-'}</span>
-                    </div>
-                  </div>
-
-                  <div className="sm:col-span-1 bg-white p-1.5 rounded border border-slate-200 text-right flex flex-col justify-center">
-                    <span className="text-[10px] text-slate-500 block">งบตามแผน (ปี {targetYear}):</span>
-                    <span className="text-xs sm:text-sm font-bold text-emerald-700 font-mono block">
-                      ฿{formatMoneyNoDec(Number(approvalModalProject[`งบประมาณ ${targetYear}` as keyof Project]) || 0)}
-                    </span>
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 leading-relaxed">
+                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold">การดำเนินการสำหรับผู้ดูแลระบบ (Admin Only)</div>
+                  <div className="mt-0.5 text-amber-800">
+                    การยกเลิกการอนุมัติจะคืนสถานะโครงการนี้กลับเป็น <strong>"ยังไม่อนุมัติงบ" (Pending)</strong> และรีเซ็ตยอดงบประมาณที่อนุมัติเป็น 0 บาท
                   </div>
                 </div>
               </div>
 
-              {/* 2. ช่องกรอก/เลือกข้อมูล: ชื่อโครงการ (Editable Input) & วันที่อนุมัติ */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="sm:col-span-2">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <label className="block text-[11px] font-bold text-slate-800">
-                      ชื่อโครงการ (ตามเทศบัญญัติ) <span className="text-rose-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setFormProjectName(approvalModalProject['ชื่อโครงการ'])}
-                      className="text-[10px] text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
-                    >
-                      ใช้ชื่อตามแผน
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={formProjectName}
-                    onChange={(e) => setFormProjectName(e.target.value)}
-                    placeholder="ระบุชื่อโครงการจริงในเทศบัญญัติ..."
-                    className="w-full h-[36px] bg-white border border-slate-300 rounded-lg px-2.5 text-xs text-slate-900 font-medium focus:outline-none focus:ring-1.5 focus:ring-emerald-500 shadow-2xs"
-                  />
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-1.5 text-xs">
+                <div className="text-slate-500">โครงการ:</div>
+                <div className="font-semibold text-slate-800 leading-snug">
+                  {revokingProject.name}
                 </div>
-
-                <div className="sm:col-span-1">
-                  <label className="block text-[11px] font-bold text-slate-800 mb-0.5">
-                    วันที่อนุมัติ <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={formApprovalDate}
-                    onChange={(e) => setFormApprovalDate(e.target.value)}
-                    className="w-full h-[36px] bg-white border border-slate-300 rounded-lg px-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:ring-1.5 focus:ring-emerald-500 shadow-2xs cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* 3. โครงการที่ผ่านการอนุมัติ & แหล่งที่มาของงบประมาณ (ขนานกัน 2 คอลัมน์) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {/* โครงการที่ผ่านการอนุมัติ (Dropdown เดียว) */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-800 mb-0.5">
-                    โครงการที่ผ่านการอนุมัติ <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formApprovalType}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormApprovalType(val);
-                      // Auto-suggest matching budget source
-                      if (val) {
-                        setFormBudgetSource(val);
-                      }
-                    }}
-                    className="w-full h-[36px] bg-white border border-slate-300 rounded-lg px-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-1.5 focus:ring-emerald-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value="">-- เลือกประเภทการอนุมัติ --</option>
-                    {ELAAS_APPROVAL_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* แหล่งที่มาของงบประมาณ (Dropdown) */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-800 mb-0.5">
-                    แหล่งที่มาของงบประมาณ <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={formBudgetSource}
-                    onChange={(e) => setFormBudgetSource(e.target.value)}
-                    className="w-full h-[36px] bg-white border border-slate-300 rounded-lg px-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-1.5 focus:ring-emerald-500 cursor-pointer shadow-2xs"
-                  >
-                    {ELAAS_BUDGET_SOURCES.map((src) => (
-                      <option key={src} value={src}>
-                        {src}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* 4. จำนวนเงินที่อนุมัติ & หมายเหตุ (ขนานกัน 2 คอลัมน์) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {/* จำนวนเงินที่อนุมัติ (Input ตัวเลข) */}
-                <div>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <label className="block text-[11px] font-bold text-slate-800">
-                      จำนวนเงินที่อนุมัติ (บาท) <span className="text-rose-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const planned = Number(approvalModalProject[`งบประมาณ ${targetYear}` as keyof Project]) || 0;
-                        if (planned > 0) setFormApprovedAmount(planned);
-                      }}
-                      className="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold underline cursor-pointer"
-                    >
-                      ดึงงบตามแผน
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={formApprovedAmount}
-                      onChange={(e) => setFormApprovedAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                      placeholder="0.00"
-                      className="w-full h-[36px] bg-white border border-slate-300 rounded-lg pl-2.5 pr-7 text-xs text-slate-900 font-bold font-mono focus:outline-none focus:ring-1.5 focus:ring-emerald-500 shadow-2xs"
-                    />
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">
-                      ฿
-                    </span>
-                  </div>
-                </div>
-
-                {/* หมายเหตุ */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-800 mb-0.5">
-                    หมายเหตุ
-                  </label>
-                  <input
-                    type="text"
-                    value={formNote}
-                    onChange={(e) => setFormNote(e.target.value)}
-                    placeholder="เช่น อนุมัติตามเทศบัญญัติงบประมาณ..."
-                    className="w-full h-[36px] bg-white border border-slate-300 rounded-lg px-2.5 text-xs text-slate-800 focus:outline-none focus:ring-1.5 focus:ring-emerald-500 shadow-2xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer: [บันทึก] (สีเขียว) และ [กลับไป] (สีเทา) - Pinned to bottom */}
-            <div className="bg-slate-50 px-4 py-2 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
-              <div className="text-[10px] text-slate-500">
-                * เมื่อบันทึกแล้ว สถานะจะปรับเป็น <strong className="text-emerald-700">"อนุมัติแล้ว"</strong>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setApprovalModalProject(null)}
-                  className="px-3.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition cursor-pointer shadow-2xs"
-                >
-                  กลับไป
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSaveApprovalForm}
-                  className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs hover:shadow-xs transition cursor-pointer"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>บันทึก</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* SECTION 4: MODAL รายงานยอดงบประมาณคงเหลือ (เมื่อกดปุ่มรายงาน)                 */}
-      {/* ========================================================================= */}
-      {isBalanceReportOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsBalanceReportOpen(false);
-          }}
-        >
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden flex flex-col my-auto max-h-[92vh]">
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Printer className="w-5 h-5 text-indigo-400" />
-                <div>
-                  <h3 className="text-base font-bold leading-tight">
-                    รายงานสรุปยอดงบประมาณคงเหลือและการจัดสรรงบประมาณ
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    {ORG_NAME} ประจำปีงบประมาณ พ.ศ. {targetYear}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1 px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>พิมพ์รายงาน</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsBalanceReportOpen(false)}
-                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <span className="text-slate-500 font-semibold block">ยอดงบประมาณตามแผนทั้งหมด</span>
-                  <span className="text-base font-bold text-slate-900 font-mono block mt-1">
-                    ฿{formatMoneyNoDec(overallStats.totalPlanned)}
+                <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-600">
+                  <span>งบเดิมที่อนุมัติ:</span>
+                  <span className="font-bold font-mono text-emerald-700">
+                    ฿{revokingProject.budgetApproved.toLocaleString()}
                   </span>
-                </div>
-                <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200">
-                  <span className="text-emerald-700 font-semibold block">ยอดงบประมาณที่อนุมัติแล้ว</span>
-                  <span className="text-base font-bold text-emerald-800 font-mono block mt-1">
-                    ฿{formatMoneyNoDec(overallStats.totalApproved)}
-                  </span>
-                </div>
-                <div className="bg-indigo-50 p-3 rounded-xl border border-indigo-200">
-                  <span className="text-indigo-700 font-semibold block">ยอดงบประมาณคงเหลือที่ยังไม่อนุมัติ</span>
-                  <span className="text-base font-bold text-indigo-900 font-mono block mt-1">
-                    ฿{formatMoneyNoDec(overallStats.totalBalance)}
-                  </span>
+                  <span>({revokingProject.budgetSource})</span>
                 </div>
               </div>
 
-              {/* Table Grouped by Strategy */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
-                      <th className="py-2 px-3 w-12 text-center">ที่</th>
-                      <th className="py-2 px-3">ยุทธศาสตร์ / ประเด็นการพัฒนา</th>
-                      <th className="py-2 px-3 text-center w-24">โครงการ</th>
-                      <th className="py-2 px-3 text-right w-32">งบตามแผน (บาท)</th>
-                      <th className="py-2 px-3 text-right w-32 text-emerald-800">อนุมัติแล้ว (บาท)</th>
-                      <th className="py-2 px-3 text-right w-32 text-indigo-800">คงเหลือ (บาท)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {groupedProjects.map((grp, i) => (
-                      <tr key={grp.strategyName} className="hover:bg-slate-50">
-                        <td className="py-2 px-3 text-center font-mono">{i + 1}</td>
-                        <td className="py-2 px-3 font-semibold text-slate-800">{grp.strategyName}</td>
-                        <td className="py-2 px-3 text-center font-mono">{grp.items.length}</td>
-                        <td className="py-2 px-3 text-right font-mono font-semibold text-slate-700">
-                          {formatMoneyNoDec(grp.totalPlanned)}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-emerald-700">
-                          {formatMoneyNoDec(grp.totalApproved)}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-indigo-700">
-                          {formatMoneyNoDec(grp.totalBalance)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-100 font-bold text-slate-900 border-t border-slate-300">
-                      <td colSpan={2} className="py-2.5 px-3 text-right">รวมทั้งสิ้น</td>
-                      <td className="py-2.5 px-3 text-center font-mono">{overallStats.totalCount}</td>
-                      <td className="py-2.5 px-3 text-right font-mono">฿{formatMoneyNoDec(overallStats.totalPlanned)}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-emerald-800">฿{formatMoneyNoDec(overallStats.totalApproved)}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-indigo-800">฿{formatMoneyNoDec(overallStats.totalBalance)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              <p className="text-xs text-slate-600">
+                คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการอนุมัติโครงการนี้?
+              </p>
             </div>
 
-            <div className="bg-slate-100 px-5 py-3 border-t border-slate-200 flex justify-end">
+            <div className="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex items-center justify-end gap-2.5">
               <button
                 type="button"
-                onClick={() => setIsBalanceReportOpen(false)}
-                className="px-4 py-2 rounded-lg bg-slate-300 hover:bg-slate-400 text-slate-800 font-bold text-xs transition cursor-pointer"
+                onClick={() => setRevokingProject(null)}
+                className="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
               >
-                ปิด
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-revoke-approval"
+                onClick={() => handleExecuteRevoke(revokingProject)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>ยืนยันยกเลิกการอนุมัติ</span>
               </button>
             </div>
           </div>

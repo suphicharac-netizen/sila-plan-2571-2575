@@ -1,537 +1,395 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- * ระบบจัดการแผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) เทศบาลเมืองศิลา
- */
-
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Sidebar, ActiveView } from './components/Sidebar';
-import { DashboardView } from './components/DashboardView';
-import { Plan5View } from './components/Plan5View';
-import { ApprovalView } from './components/ApprovalView';
+import React, { useState, useMemo } from 'react';
+import { ActiveNavMenu, ProjectData, PlanEdition, PlanAnnouncement, ProjectTrackingItem } from './types';
+import { storageService } from './services/storage';
+import { Sidebar } from './components/Sidebar';
 import { BudgetApprovalView } from './components/BudgetApprovalView';
-import { ReportView } from './components/ReportView';
-import { SearchView } from './components/SearchView';
-import { UserManagementView } from './components/UserManagementView';
+import { PlanDetail02View } from './components/PlanDetail02View';
+import { PlanApprovalAnnouncementView } from './components/PlanApprovalAnnouncementView';
 import { ProjectTrackingView } from './components/ProjectTrackingView';
-import { LoginPage } from './components/LoginPage';
-import { PdfExportModal } from './components/PdfExportModal';
-import { BackupModal } from './components/BackupModal';
-import { AppsScriptModal } from './components/AppsScriptModal';
-import { Toast, ToastMessage } from './components/Toast';
-import { StorageService } from './services/storageService';
-import { AuthService } from './services/authService';
-import { IndexedDbBackupService } from './services/indexedDbService';
-import { ApiSyncService } from './services/apiSyncService';
-import {
-  Project,
-  PlanApproval,
-  BudgetApproval,
-  UserItem,
-  OptionsData,
-  PlanType,
-  SearchCriteria,
-  ProjectTrackingItem,
-  AuthSession
-} from './types';
-import { ProjectFormModal } from './components/ProjectFormModal';
+import { LocalPlanReportView } from './components/LocalPlanReportView';
+import { ProjectSearchView } from './components/ProjectSearchView';
+import { DashboardOverviewView } from './components/DashboardOverviewView';
+import { VillagePlanView } from './components/VillagePlanView';
+import { OtherViews } from './components/OtherViews';
+import { BudgetApprovalModal } from './components/BudgetApprovalModal';
+import { DataStorageModal } from './components/DataStorageModal';
+import { GoogleSheetsSyncModal } from './components/GoogleSheetsSyncModal';
+import { RemainingBudgetModal } from './components/RemainingBudgetModal';
+import { PlanProjectDetailModal } from './components/PlanProjectDetailModal';
+import { PlanProjectFormModal } from './components/PlanProjectFormModal';
+import { PlanHistoryModal } from './components/PlanHistoryModal';
 
 export default function App() {
-  // Authentication State
-  const [authSession, setAuthSession] = useState<AuthSession | null>(() =>
-    AuthService.getCurrentSession()
-  );
-  const [currentUser, setCurrentUser] = useState<UserItem | null>(() =>
-    AuthService.getCurrentUser()
-  );
+  // Default to 'dashboard' matching user's requested overview screen
+  const [activeMenu, setActiveMenu] = useState<ActiveNavMenu>('dashboard');
 
-  // View & Filter State
-  const [currentView, setCurrentView] = useState<ActiveView>('dashboard');
-  const [globalFiscalYear, setGlobalFiscalYear] = useState<number>(2571);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
-  const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
-  const [isAppsScriptModalOpen, setIsAppsScriptModalOpen] = useState<boolean>(false);
-  const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState<boolean>(false);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  // Loaded Projects from persistent storage
+  const [projects, setProjects] = useState<ProjectData[]>(() => {
+    return storageService.getProjects();
+  });
 
-  // Selected project for direct inspection/edit across views
-  const [inspectingProject, setInspectingProject] = useState<Project | null>(null);
+  // Loaded Announcements from persistent storage
+  const [announcements, setAnnouncements] = useState<PlanAnnouncement[]>(() => {
+    return storageService.getAnnouncements();
+  });
 
-  // Selected edition for Report ผ.02
-  const [reportEdition, setReportEdition] = useState<string>('ทั้งหมด');
+  // Loaded Tracking Items from persistent storage
+  const [trackingItems, setTrackingItems] = useState<ProjectTrackingItem[]>(() => {
+    return storageService.getTrackingItems();
+  });
 
-  // Loaded database items
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [approvals, setApprovals] = useState<PlanApproval[]>([]);
-  const [budgetApprovals, setBudgetApprovals] = useState<BudgetApproval[]>([]);
-  const [projectTrackings, setProjectTrackings] = useState<ProjectTrackingItem[]>([]);
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [options, setOptions] = useState<OptionsData>({});
+  // Modal States
+  const [selectedApprovalProject, setSelectedApprovalProject] = useState<ProjectData | null>(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
 
-  // Reload data from storage
-  const loadAllData = useCallback(() => {
-    setProjects(StorageService.getProjects());
-    setApprovals(StorageService.getApprovals());
-    setBudgetApprovals(StorageService.getBudgetApprovals());
-    setProjectTrackings(StorageService.getProjectTrackings());
-    setUsers(StorageService.getUsers());
-    setOptions(StorageService.getOptions());
-    setCurrentUser(AuthService.getCurrentUser());
-  }, []);
+  // Plan 02 Modals
+  const [viewDetailProject, setViewDetailProject] = useState<ProjectData | null>(null);
+  const [historyProject, setHistoryProject] = useState<ProjectData | null>(null);
+  const [formProject, setFormProject] = useState<ProjectData | null>(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [formTargetEdition, setFormTargetEdition] = useState<PlanEdition>('first');
 
-  useEffect(() => {
-    loadAllData();
+  // Sync & Storage Modals
+  const [isStorageModalOpen, setIsStorageModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isRemainingBudgetModalOpen, setIsRemainingBudgetModalOpen] = useState(false);
 
-    // Background Auto-Pull from Google Sheets if configured
-    if (ApiSyncService.isAutoSyncEnabled()) {
-      ApiSyncService.pullFromSheets().then((res) => {
-        if (res.success && res.count && res.count > 0) {
-          loadAllData();
-        }
-      }).catch((e) => {
-        console.warn('Background auto-pull error:', e);
-      });
-    }
-  }, [loadAllData]);
-
-  // Handle Login Success
-  const handleLoginSuccess = (session: AuthSession) => {
-    setAuthSession(session);
-    setCurrentUser(session.user);
-    loadAllData();
-    addToast('เข้าสู่ระบบสำเร็จ', `ยินดีต้อนรับ ${session.user['ชื่อ-สกุล']} (${session.user['สิทธิ์การใช้งาน']})`);
-  };
-
-  // Handle Logout
-  const handleLogout = () => {
-    AuthService.logout();
-    setAuthSession(null);
-    setCurrentUser(null);
-    addToast('ออกจากระบบเรียบร้อย', 'ท่านได้ออกจากระบบความปลอดภัยแล้ว', 'info');
-  };
-
-  // Toast helper
-  const addToast = useCallback(
-    (title: string, message?: string, type: ToastMessage['type'] = 'success') => {
-      const id = Date.now().toString() + Math.random().toString().slice(2, 6);
-      setToasts((prev) => [...prev, { id, title, message, type }]);
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, 3500);
-    },
-    []
-  );
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  // Counts by plan type
-  const countsByType = useMemo(() => {
-    const counts: Record<PlanType, number> = {
-      'ฉบับแรก': 0,
-      'เพิ่มเติม': 0,
-      'เปลี่ยนแปลง': 0,
-      'แก้ไข': 0
+  // Compute edition counts for sidebar badges
+  const editionCounts = useMemo(() => {
+    return {
+      first: projects.filter((p) => p.edition === 'first').length,
+      additional: projects.filter((p) => p.edition === 'additional').length,
+      changed: projects.filter((p) => p.edition === 'changed').length,
+      amended: projects.filter((p) => p.edition === 'amended').length
     };
-    projects.forEach((p) => {
-      const t = (p['ประเภทรายการ'] || 'ฉบับแรก') as PlanType;
-      if (counts[t] !== undefined) counts[t]++;
-    });
-    return counts;
   }, [projects]);
 
-  // Dashboard calculations
-  const dashboardData = useMemo(() => {
-    return StorageService.getDashboardData();
-  }, [projects]);
-
-  // Report calculations
-  const report01Data = useMemo(() => {
-    return StorageService.getReport01();
-  }, [projects]);
-
-  const report02Data = useMemo(() => {
-    const filter = reportEdition !== 'ทั้งหมด' ? (reportEdition as PlanType) : undefined;
-    return StorageService.getReport02(filter);
-  }, [projects, reportEdition]);
-
-  // Handlers for Projects
-  const handleSaveProject = (data: Partial<Project>) => {
-    try {
-      const res = StorageService.saveProject(data);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(
-        res.status === 'created' ? `เพิ่มโครงการ #${res.id}` : `แก้ไขโครงการ #${res.id}`
-      );
-      ApiSyncService.triggerAutoPush();
-      if (res.status === 'created') {
-        addToast('บันทึกโครงการสำเร็จ', `เพิ่มโครงการ #${res.id} ในแผนเรียบร้อย`);
-      } else {
-        addToast('อัปเดตข้อมูลสำเร็จ', `ปรับปรุงข้อมูลโครงการ #${res.id} เรียบร้อย`);
-      }
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
-    }
-  };
-
-  const handleDeleteProject = (id: number) => {
-    try {
-      StorageService.deleteProject(id);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(`ลบโครงการ #${id}`);
-      ApiSyncService.triggerAutoPush();
-      addToast('ลบโครงการเรียบร้อย', `โครงการ #${id} ถูกลบออกจากระบบแล้ว`);
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถลบข้อมูลได้', 'error');
-    }
-  };
-
-  // Handlers for Approvals
-  const handleSaveApproval = (data: Partial<PlanApproval>) => {
-    try {
-      const res = StorageService.saveApproval(data);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(`บันทึกมติประกาศใช้แผน ครั้งที่ ${data['ครั้งที่']}`);
-      ApiSyncService.triggerAutoPush();
-      addToast('บันทึกการอนุมัติสำเร็จ', `บันทึกมติประกาศใช้แผน ครั้งที่ ${data['ครั้งที่']}`);
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถบันทึกการอนุมัติได้', 'error');
-    }
-  };
-
-  const handleDeleteApproval = (id: number) => {
-    try {
-      StorageService.deleteApproval(id);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(`ลบรายการอนุมัติ #${id}`);
-      ApiSyncService.triggerAutoPush();
-      addToast('ลบรายการอนุมัติเรียบร้อย', `รายการอนุมัติ #${id} ถูกลบแล้ว`);
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถลบรายการได้', 'error');
-    }
-  };
-
-  // Handlers for Budget Approvals
-  const handleSaveBudgetApproval = (data: Partial<BudgetApproval>) => {
-    try {
-      const res = StorageService.saveBudgetApproval(data);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(`บันทึกข้อบัญญัติงบประมาณ พ.ศ. ${data['ปีงบประมาณ']}`);
-      ApiSyncService.triggerAutoPush();
-      addToast('บันทึกการอนุมัติงบประมาณสำเร็จ', `ปีงบประมาณ พ.ศ. ${data['ปีงบประมาณ']}`);
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
-    }
-  };
-
-  const handleDeleteBudgetApproval = (id: number) => {
-    try {
-      StorageService.deleteBudgetApproval(id);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(`ลบรายการอนุมัติงบประมาณ #${id}`);
-      ApiSyncService.triggerAutoPush();
-      addToast('ลบรายการอนุมัติงบประมาณเรียบร้อย', `รายการ #${id} ถูกลบแล้ว`);
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถลบข้อมูลได้', 'error');
-    }
-  };
-
-  // Handlers for Users
-  const handleSaveUser = (data: Partial<UserItem>) => {
-    try {
-      const res = StorageService.saveUser(data);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(`บันทึกข้อมูลผู้ใช้งาน ${data['ชื่อ-สกุล']}`);
-      ApiSyncService.triggerAutoPush();
-      if (res.status === 'created') {
-        addToast('เพิ่มผู้ใช้งานสำเร็จ', `บันทึกข้อมูล ${data['ชื่อ-สกุล']} เรียบร้อย`);
-      } else {
-        addToast('อัปเดตผู้ใช้งานสำเร็จ', `ปรับปรุงข้อมูล ${data['ชื่อ-สกุล']} เรียบร้อย`);
-      }
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถบันทึกผู้ใช้งานได้', 'error');
-    }
-  };
-
-  const handleDeleteUser = (id: number) => {
-    try {
-      StorageService.deleteUser(id);
-      loadAllData();
-      IndexedDbBackupService.createSnapshot(`ลบผู้ใช้งาน #${id}`);
-      ApiSyncService.triggerAutoPush();
-      addToast('ลบผู้ใช้งานเรียบร้อย', `ผู้ใช้งาน #${id} ถูกลบออกจากระบบแล้ว`);
-    } catch (e: any) {
-      addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถลบผู้ใช้งานได้', 'error');
-    }
-  };
-
-  // Project Tracking Handlers
-  const handleSaveProjectTracking = useCallback(
-    (data: Partial<ProjectTrackingItem>) => {
-      try {
-        const res = StorageService.saveProjectTracking(data);
-        loadAllData();
-        IndexedDbBackupService.createSnapshot(`อัปเดตติดตามโครงการ #${data.projectID || res.id}`);
-        ApiSyncService.triggerAutoPush();
-        addToast(
-          res.status === 'created' ? 'เพิ่มรายการติดตามสำเร็จ' : 'อัปเดตข้อมูลติดตามสำเร็จ',
-          `โครงการ "${data['ชื่อโครงการ'] || ''}" ได้รับการบันทึกแล้ว`
-        );
-      } catch (e: any) {
-        addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถบันทึกข้อมูลติดตามได้', 'error');
-      }
-    },
-    [loadAllData, addToast]
-  );
-
-  const handleDeleteProjectTracking = useCallback(
-    (id: number) => {
-      try {
-        StorageService.deleteProjectTracking(id);
-        loadAllData();
-        IndexedDbBackupService.createSnapshot(`ลบรายการติดตาม #${id}`);
-        ApiSyncService.triggerAutoPush();
-        addToast('ลบรายการติดตามสำเร็จ', 'ลบข้อมูลติดตามโครงการออกจากระบบแล้ว', 'info');
-      } catch (e: any) {
-        addToast('เกิดข้อผิดพลาด', e.message || 'ไม่สามารถลบข้อมูลได้', 'error');
-      }
-    },
-    [loadAllData, addToast]
-  );
-
-  // Option Adding
-  const handleAddOption = (category: string, value: string) => {
-    const updated = StorageService.addOption(category, value);
-    setOptions(updated);
-    addToast('เพิ่มตัวเลือกสำเร็จ', `เพิ่ม "${value}" ในหมวด ${category}`);
-  };
-
-  // Direct select project from Search or Topbar Quick-Search
-  const handleSelectProjectDirect = (p: Project) => {
-    setInspectingProject(p);
-  };
-
-  // Search filter function
-  const handlePerformSearch = (criteria: SearchCriteria) => {
-    return StorageService.searchProjects(criteria);
-  };
-
-  // If user is not authenticated, render Login Page
-  if (!authSession) {
-    return (
-      <>
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
-        <Toast toasts={toasts} onDismiss={removeToast} />
-      </>
+  // Handle saving an approved/updated project in budget approval
+  const handleSaveProjectApproval = (updatedProject: ProjectData) => {
+    const nextProjects = projects.map((p) =>
+      p.id === updatedProject.id ? updatedProject : p
     );
-  }
+    setProjects(nextProjects);
+    storageService.saveProjects(nextProjects);
+    setIsApprovalModalOpen(false);
+    setSelectedApprovalProject(null);
+  };
+
+  // Handle revoking project approval (Admin only unlock)
+  const handleRevokeProjectApproval = (revokedProject: ProjectData) => {
+    const nextProjects = projects.map((p) =>
+      p.id === revokedProject.id ? revokedProject : p
+    );
+    setProjects(nextProjects);
+    storageService.saveProjects(nextProjects);
+  };
+
+  // Handle saving (add or edit) in Plan 02 View
+  const handleSavePlanProject = (savedProject: ProjectData) => {
+    const exists = projects.some((p) => p.id === savedProject.id);
+    let nextProjects: ProjectData[];
+    if (exists) {
+      nextProjects = projects.map((p) => (p.id === savedProject.id ? savedProject : p));
+    } else {
+      nextProjects = [savedProject, ...projects];
+    }
+    setProjects(nextProjects);
+    storageService.saveProjects(nextProjects);
+    setIsFormModalOpen(false);
+    setFormProject(null);
+  };
+
+  // Handle deleting a project
+  const handleDeletePlanProject = (projectId: string) => {
+    if (window.confirm('คุณต้องการลบโครงการนี้ออกจากแผนพัฒนาท้องถิ่นใช่หรือไม่?')) {
+      const nextProjects = projects.filter((p) => p.id !== projectId);
+      setProjects(nextProjects);
+      storageService.saveProjects(nextProjects);
+    }
+  };
+
+  // Handle bulk data update from storage import or reset
+  const handleDataUpdated = (newProjects: ProjectData[]) => {
+    setProjects(newProjects);
+    storageService.saveProjects(newProjects);
+  };
+
+  // Handle saving an announcement (add or edit)
+  const handleSaveAnnouncement = (ann: PlanAnnouncement, updatedProjects?: ProjectData[]) => {
+    const exists = announcements.some((a) => a.id === ann.id);
+    let nextAnnouncements: PlanAnnouncement[];
+    if (exists) {
+      nextAnnouncements = announcements.map((a) => (a.id === ann.id ? ann : a));
+    } else {
+      nextAnnouncements = [ann, ...announcements];
+    }
+    setAnnouncements(nextAnnouncements);
+    storageService.saveAnnouncements(nextAnnouncements);
+
+    if (updatedProjects && updatedProjects.length > 0) {
+      setProjects(updatedProjects);
+      storageService.saveProjects(updatedProjects);
+    }
+  };
+
+  // Handle deleting an announcement
+  const handleDeleteAnnouncement = (id: string) => {
+    const nextAnnouncements = announcements.filter((a) => a.id !== id);
+    setAnnouncements(nextAnnouncements);
+    storageService.saveAnnouncements(nextAnnouncements);
+  };
+
+  // Handle saving tracking items
+  const handleSaveTrackingItems = (items: ProjectTrackingItem[]) => {
+    setTrackingItems(items);
+    storageService.saveTrackingItems(items);
+  };
+
+  const handleOpenAddProject = (edition: PlanEdition) => {
+    setFormTargetEdition(edition);
+    setFormProject(null);
+    setIsFormModalOpen(true);
+  };
+
+  const handleOpenEditProject = (project: ProjectData) => {
+    setFormTargetEdition(project.edition);
+    setFormProject(project);
+    setIsFormModalOpen(true);
+  };
 
   return (
-    <div id="app" className="flex h-screen overflow-hidden bg-slate-900 font-sans antialiased text-slate-900">
-      {/* Sidebar */}
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-['Sarabun',sans-serif] text-slate-800 antialiased select-auto print:h-auto print:w-auto print:overflow-visible print:bg-white">
+      {/* 1. Left Sidebar Navigation */}
       <Sidebar
-        currentView={currentView}
-        onNavigate={(v) => setCurrentView(v)}
-        onOpenBackup={() => setIsBackupModalOpen(true)}
-        onOpenAppsScript={() => setIsAppsScriptModalOpen(true)}
-        isOpenMobile={isMobileSidebarOpen}
-        onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        countsByType={countsByType}
-        currentUser={currentUser}
-        onLogout={handleLogout}
+        activeMenu={activeMenu}
+        onSelectMenu={(menu) => setActiveMenu(menu)}
+        editionCounts={editionCounts}
+        onOpenSyncModal={() => setIsSyncModalOpen(true)}
+        onOpenStorageModal={() => setIsStorageModalOpen(true)}
       />
 
-      {/* Main Container */}
-      <div id="main" className="flex-1 flex flex-col min-w-0 h-screen bg-[#f8fafc] overflow-hidden">
-        {/* Dynamic Main Content Canvas */}
-        <main
-          id="content"
-          className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 max-w-[1600px] w-full mx-auto space-y-2.5 overflow-y-auto custom-scrollbar"
-        >
-          {currentView === 'dashboard' && (
-            <DashboardView
-              data={dashboardData}
-              allProjects={projects}
-              onSelectProject={handleSelectProjectDirect}
-              onNavigate={(v) => setCurrentView(v)}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
+      {/* 2. Main Content Area */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 print:h-auto print:overflow-visible print:w-full print:m-0 print:p-0 print:block">
+        {/* Render PlanDetail02View for the 4 editions */}
+        {activeMenu === 'edition_first' && (
+          <PlanDetail02View
+            edition="first"
+            projects={projects}
+            onAddProject={handleOpenAddProject}
+            onEditProject={handleOpenEditProject}
+            onViewProject={(p) => setViewDetailProject(p)}
+            onViewHistory={(p) => setHistoryProject(p)}
+            onDeleteProject={handleDeletePlanProject}
+            onSaveNewProject={handleSavePlanProject}
+          />
+        )}
 
-          {currentView === 'plan-first' && (
-            <Plan5View
-              planType="ฉบับแรก"
+        {activeMenu === 'edition_additional' && (
+          <PlanDetail02View
+            edition="additional"
+            projects={projects}
+            onAddProject={handleOpenAddProject}
+            onEditProject={handleOpenEditProject}
+            onViewProject={(p) => setViewDetailProject(p)}
+            onViewHistory={(p) => setHistoryProject(p)}
+            onDeleteProject={handleDeletePlanProject}
+            onSaveNewProject={handleSavePlanProject}
+          />
+        )}
+
+        {activeMenu === 'edition_changed' && (
+          <PlanDetail02View
+            edition="changed"
+            projects={projects}
+            onAddProject={handleOpenAddProject}
+            onEditProject={handleOpenEditProject}
+            onViewProject={(p) => setViewDetailProject(p)}
+            onViewHistory={(p) => setHistoryProject(p)}
+            onDeleteProject={handleDeletePlanProject}
+            onSaveNewProject={handleSavePlanProject}
+          />
+        )}
+
+        {activeMenu === 'edition_amended' && (
+          <PlanDetail02View
+            edition="amended"
+            projects={projects}
+            onAddProject={handleOpenAddProject}
+            onEditProject={handleOpenEditProject}
+            onViewProject={(p) => setViewDetailProject(p)}
+            onViewHistory={(p) => setHistoryProject(p)}
+            onDeleteProject={handleDeletePlanProject}
+            onSaveNewProject={handleSavePlanProject}
+          />
+        )}
+
+        {/* Budget Approval View */}
+        {activeMenu === 'budget_approval' && (
+          <BudgetApprovalView
+            projects={projects}
+            onOpenApprovalModal={(p) => {
+              setSelectedApprovalProject(p);
+              setIsApprovalModalOpen(true);
+            }}
+            onOpenRemainingBudgetReport={() => setIsRemainingBudgetModalOpen(true)}
+            onOpenProjectDetail={(p) => setViewDetailProject(p)}
+            onRevokeApproval={handleRevokeProjectApproval}
+            isAdmin={true}
+          />
+        )}
+
+        {/* Approve Plan Announcement View (ระบบอนุมัติและประกาศใช้แผนพัฒนาท้องถิ่น) */}
+        {activeMenu === 'approve_plan' && (
+          <PlanApprovalAnnouncementView
+            projects={projects}
+            announcements={announcements}
+            onSaveAnnouncement={handleSaveAnnouncement}
+            onDeleteAnnouncement={handleDeleteAnnouncement}
+            onViewProjectDetail={(p) => setViewDetailProject(p)}
+            onUpdateProjects={(nextProjects) => {
+              setProjects(nextProjects);
+              storageService.saveProjects(nextProjects);
+            }}
+          />
+        )}
+
+        {/* Project Tracking View (ระบบติดตามโครงการ ผ.03) */}
+        {activeMenu === 'project_tracking' && (
+          <ProjectTrackingView
+            trackingItems={trackingItems}
+            allProjects={projects}
+            onSaveTrackingItems={handleSaveTrackingItems}
+            onOpenProjectDetail={(p) => setViewDetailProject(p)}
+          />
+        )}
+
+        {/* Local Plan Reports View (รายงานแผนพัฒนาท้องถิ่น ผ.01, ผ.02, ฉบับรวม) */}
+        {activeMenu === 'report_plan' && (
+          <LocalPlanReportView
+            projects={projects}
+            onOpenProjectDetail={(p) => setViewDetailProject(p)}
+          />
+        )}
+
+        {/* Project Search View (ระบบสืบค้นโครงการแผนพัฒนาท้องถิ่น) */}
+        {activeMenu === 'project_search' && (
+          <ProjectSearchView
+            projects={projects}
+            onOpenProjectDetail={(p) => setViewDetailProject(p)}
+          />
+        )}
+
+        {/* Village Plan View (แผนพัฒนารายหมู่บ้าน - Zone Hierarchy) */}
+        {activeMenu === 'village_plan' && (
+          <VillagePlanView
+            projects={projects}
+            onViewProjectDetail={(p) => setViewDetailProject(p)}
+          />
+        )}
+
+        {/* Dashboard Overview View (ระบบแดชบอร์ดภาพรวมและสถิติ) */}
+        {activeMenu === 'dashboard' && (
+          <DashboardOverviewView
+            projects={projects}
+            trackingItems={trackingItems}
+            onNavigateToMenu={(menu) => setActiveMenu(menu)}
+            onViewProjectDetail={(p) => setViewDetailProject(p)}
+          />
+        )}
+
+        {/* Other Views (Settings, etc.) */}
+        {activeMenu !== 'edition_first' &&
+          activeMenu !== 'edition_additional' &&
+          activeMenu !== 'edition_changed' &&
+          activeMenu !== 'edition_amended' &&
+          activeMenu !== 'budget_approval' &&
+          activeMenu !== 'approve_plan' &&
+          activeMenu !== 'project_tracking' &&
+          activeMenu !== 'village_plan' &&
+          activeMenu !== 'report_plan' &&
+          activeMenu !== 'project_search' &&
+          activeMenu !== 'dashboard' && (
+            <OtherViews
+              activeMenu={activeMenu}
               projects={projects}
-              options={options}
-              onSaveProject={handleSaveProject}
-              onDeleteProject={handleDeleteProject}
-              onAddOption={handleAddOption}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+              onNavigateToBudgetApproval={() => setActiveMenu('budget_approval')}
+              onOpenApprovalModal={(p) => {
+                setSelectedApprovalProject(p);
+                setIsApprovalModalOpen(true);
+              }}
             />
           )}
+      </main>
 
-          {currentView === 'plan-additional' && (
-            <Plan5View
-              planType="เพิ่มเติม"
-              projects={projects}
-              options={options}
-              onSaveProject={handleSaveProject}
-              onDeleteProject={handleDeleteProject}
-              onAddOption={handleAddOption}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
+      {/* 3. Global Modals & Dialogs */}
+      {/* Plan Project Detail Modal (แบบ ผ.02 / ฉบับเปลี่ยนแปลง) */}
+      <PlanProjectDetailModal
+        project={viewDetailProject}
+        allProjects={projects}
+        onClose={() => setViewDetailProject(null)}
+        onSave={handleSavePlanProject}
+        onDelete={handleDeletePlanProject}
+        readOnly={viewDetailProject?.status === 'approved' || activeMenu === 'budget_approval'}
+      />
 
-          {currentView === 'plan-change' && (
-            <Plan5View
-              planType="เปลี่ยนแปลง"
-              projects={projects}
-              options={options}
-              onSaveProject={handleSaveProject}
-              onDeleteProject={handleDeleteProject}
-              onAddOption={handleAddOption}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
+      {/* Plan Project Form Modal (+ เพิ่ม / แก้ไข โครงการ) */}
+      <PlanProjectFormModal
+        isOpen={isFormModalOpen}
+        onClose={() => {
+          setIsFormModalOpen(false);
+          setFormProject(null);
+        }}
+        onSave={handleSavePlanProject}
+        initialProject={formProject}
+        defaultEdition={formTargetEdition}
+      />
 
-          {currentView === 'plan-edit' && (
-            <Plan5View
-              planType="แก้ไข"
-              projects={projects}
-              options={options}
-              onSaveProject={handleSaveProject}
-              onDeleteProject={handleDeleteProject}
-              onAddOption={handleAddOption}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
+      {/* Plan History Modal */}
+      <PlanHistoryModal
+        project={historyProject}
+        onClose={() => setHistoryProject(null)}
+        onOpenNewChange={(p) => {
+          setHistoryProject(null);
+          setFormProject(p);
+          setFormTargetEdition('changed');
+          setIsFormModalOpen(true);
+        }}
+      />
 
-          {currentView === 'approval' && (
-            <ApprovalView
-              approvals={approvals}
-              projects={projects}
-              onSaveApproval={handleSaveApproval}
-              onDeleteApproval={handleDeleteApproval}
-              onNavigate={(v) => setCurrentView(v)}
-              onSelectProject={handleSelectProjectDirect}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
+      {/* Budget Allocation & Approval Modal */}
+      <BudgetApprovalModal
+        isOpen={isApprovalModalOpen}
+        project={selectedApprovalProject}
+        onClose={() => {
+          setIsApprovalModalOpen(false);
+          setSelectedApprovalProject(null);
+        }}
+        onSave={handleSaveProjectApproval}
+      />
 
-          {currentView === 'budget-approval' && (
-            <BudgetApprovalView
-              budgetApprovals={budgetApprovals}
-              onSaveBudgetApproval={handleSaveBudgetApproval}
-              onDeleteBudgetApproval={handleDeleteBudgetApproval}
-              globalFiscalYear={globalFiscalYear}
-              projects={projects}
-              approvals={approvals}
-              options={options}
-              onSelectProject={handleSelectProjectDirect}
-              onSaveProject={handleSaveProject}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
+      {/* Database / IndexedDB Storage Modal */}
+      <DataStorageModal
+        isOpen={isStorageModalOpen}
+        onClose={() => setIsStorageModalOpen(false)}
+        projects={projects}
+        onDataUpdated={handleDataUpdated}
+      />
 
-          {currentView === 'tracking' && (
-            <ProjectTrackingView
-              trackings={projectTrackings}
-              projects={projects}
-              budgetApprovals={budgetApprovals}
-              options={options}
-              globalFiscalYear={globalFiscalYear}
-              onSaveTracking={handleSaveProjectTracking}
-              onDeleteTracking={handleDeleteProjectTracking}
-              onSelectProject={handleSelectProjectDirect}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
+      {/* Google Sheets & GAS Sync Modal */}
+      <GoogleSheetsSyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        projects={projects}
+        onDataUpdated={handleDataUpdated}
+      />
 
-          {currentView === 'report' && (
-            <ReportView
-              report01={report01Data}
-              report02={report02Data}
-              selectedEdition={reportEdition}
-              onSelectEdition={(ed) => setReportEdition(ed)}
-              projects={projects}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            />
-          )}
-
-          {currentView === 'search' && (
-            <SearchView
-              options={options}
-              allProjects={projects}
-              onSearch={handlePerformSearch}
-              onSelectProject={handleSelectProjectDirect}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-              globalFiscalYear={globalFiscalYear}
-            />
-          )}
-
-          {currentView === 'users' && (
-            <UserManagementView
-              users={users}
-              onSaveUser={handleSaveUser}
-              onDeleteUser={handleDeleteUser}
-              onToggleMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-              currentUser={currentUser}
-            />
-          )}
-        </main>
-      </div>
-
-      {/* Global Project Inspect / Edit Modal */}
-      {inspectingProject && (
-        <ProjectFormModal
-          project={inspectingProject}
-          planType={inspectingProject['ประเภทรายการ'] || 'ฉบับแรก'}
-          options={options}
-          onSave={(data) => {
-            handleSaveProject(data);
-            setInspectingProject(null);
-          }}
-          onDelete={(id) => {
-            handleDeleteProject(id);
-            setInspectingProject(null);
-          }}
-          onClose={() => setInspectingProject(null)}
-          onAddOption={handleAddOption}
-        />
-      )}
-
-      {/* Global PDF Export Modal */}
-      {isPdfExportModalOpen && (
-        <PdfExportModal
-          isOpen={isPdfExportModalOpen}
-          onClose={() => setIsPdfExportModalOpen(false)}
-          projects={projects}
-          initialReportType="ผ02-baseline"
-        />
-      )}
-
-      {/* Backup and Restore Modal (IndexedDB + JSON) */}
-      {isBackupModalOpen && (
-        <BackupModal
-          onClose={() => setIsBackupModalOpen(false)}
-          onRefreshAll={loadAllData}
-          onShowToast={addToast}
-        />
-      )}
-
-      {/* Google Apps Script Modal */}
-      {isAppsScriptModalOpen && (
-        <AppsScriptModal
-          isOpen={isAppsScriptModalOpen}
-          onClose={() => setIsAppsScriptModalOpen(false)}
-          onRefreshAll={loadAllData}
-          onShowToast={addToast}
-        />
-      )}
-
-      {/* Notifications Toast */}
-      <Toast toasts={toasts} onDismiss={removeToast} />
+      {/* Remaining Budget Modal */}
+      <RemainingBudgetModal
+        isOpen={isRemainingBudgetModalOpen}
+        onClose={() => setIsRemainingBudgetModalOpen(false)}
+        projects={projects}
+        year="2571"
+      />
     </div>
   );
 }
