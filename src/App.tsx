@@ -1,15 +1,26 @@
 import React, { useState, useMemo } from 'react';
-import { ActiveNavMenu, ProjectData, PlanEdition, PlanAnnouncement, ProjectTrackingItem } from './types';
+import {
+  ActiveNavMenu,
+  ProjectData,
+  PlanEdition,
+  PlanAnnouncement,
+  ProjectTrackingItem,
+  UserAccount,
+  ALL_VILLAGES
+} from './types';
 import { storageService } from './services/storage';
+import { authService } from './services/authService';
 import { Sidebar } from './components/Sidebar';
 import { BudgetApprovalView } from './components/BudgetApprovalView';
 import { PlanDetail02View } from './components/PlanDetail02View';
 import { PlanApprovalAnnouncementView } from './components/PlanApprovalAnnouncementView';
 import { ProjectTrackingView } from './components/ProjectTrackingView';
 import { LocalPlanReportView } from './components/LocalPlanReportView';
+import { PlanBudgetComparisonReportView } from './components/PlanBudgetComparisonReportView';
 import { ProjectSearchView } from './components/ProjectSearchView';
 import { DashboardOverviewView } from './components/DashboardOverviewView';
 import { VillagePlanView } from './components/VillagePlanView';
+import { VillagePlanReportView } from './components/VillagePlanReportView';
 import { OtherViews } from './components/OtherViews';
 import { BudgetApprovalModal } from './components/BudgetApprovalModal';
 import { DataStorageModal } from './components/DataStorageModal';
@@ -18,8 +29,21 @@ import { RemainingBudgetModal } from './components/RemainingBudgetModal';
 import { PlanProjectDetailModal } from './components/PlanProjectDetailModal';
 import { PlanProjectFormModal } from './components/PlanProjectFormModal';
 import { PlanHistoryModal } from './components/PlanHistoryModal';
+import { AuthModal } from './components/AuthModal';
+import { PublicVisitorModal } from './components/PublicVisitorModal';
+import { VisitorAnalyticsModal } from './components/VisitorAnalyticsModal';
+import { LoginScreen } from './components/LoginScreen';
 
 export default function App() {
+  // Authentication & Current User State
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    return authService.getCurrentUser();
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'login' | 'register' | 'public'>('login');
+  const [isPublicModalOpen, setIsPublicModalOpen] = useState(false);
+  const [isVisitorAnalyticsOpen, setIsVisitorAnalyticsOpen] = useState(false);
+
   // Default to 'dashboard' matching user's requested overview screen
   const [activeMenu, setActiveMenu] = useState<ActiveNavMenu>('dashboard');
 
@@ -157,6 +181,42 @@ export default function App() {
     setIsFormModalOpen(true);
   };
 
+  // If no user is logged in, present the Login & Access Portal
+  if (!currentUser) {
+    return (
+      <div className="font-['Sarabun',sans-serif] text-slate-800 antialiased min-h-screen">
+        <LoginScreen
+          onLoginSuccess={(user) => setCurrentUser(user)}
+          onOpenRegister={() => {
+            setAuthModalTab('register');
+            setIsAuthModalOpen(true);
+          }}
+          onOpenPublicModal={() => setIsPublicModalOpen(true)}
+        />
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          currentUser={currentUser}
+          onUserChanged={(user) => setCurrentUser(user)}
+          onOpenAnalytics={() => setIsVisitorAnalyticsOpen(true)}
+          initialTab={authModalTab}
+        />
+
+        <PublicVisitorModal
+          isOpen={isPublicModalOpen}
+          onClose={() => setIsPublicModalOpen(false)}
+          onSuccess={(user) => setCurrentUser(user)}
+        />
+
+        <VisitorAnalyticsModal
+          isOpen={isVisitorAnalyticsOpen}
+          onClose={() => setIsVisitorAnalyticsOpen(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-['Sarabun',sans-serif] text-slate-800 antialiased select-auto print:h-auto print:w-auto print:overflow-visible print:bg-white">
       {/* 1. Left Sidebar Navigation */}
@@ -166,6 +226,16 @@ export default function App() {
         editionCounts={editionCounts}
         onOpenSyncModal={() => setIsSyncModalOpen(true)}
         onOpenStorageModal={() => setIsStorageModalOpen(true)}
+        currentUser={currentUser}
+        onOpenAuthModal={() => {
+          setAuthModalTab('login');
+          setIsAuthModalOpen(true);
+        }}
+        onOpenVisitorAnalytics={() => setIsVisitorAnalyticsOpen(true)}
+        onLogout={() => {
+          authService.setCurrentUser(null);
+          setCurrentUser(null);
+        }}
       />
 
       {/* 2. Main Content Area */}
@@ -181,6 +251,7 @@ export default function App() {
             onViewHistory={(p) => setHistoryProject(p)}
             onDeleteProject={handleDeletePlanProject}
             onSaveNewProject={handleSavePlanProject}
+            currentUser={currentUser}
           />
         )}
 
@@ -194,6 +265,7 @@ export default function App() {
             onViewHistory={(p) => setHistoryProject(p)}
             onDeleteProject={handleDeletePlanProject}
             onSaveNewProject={handleSavePlanProject}
+            currentUser={currentUser}
           />
         )}
 
@@ -207,6 +279,7 @@ export default function App() {
             onViewHistory={(p) => setHistoryProject(p)}
             onDeleteProject={handleDeletePlanProject}
             onSaveNewProject={handleSavePlanProject}
+            currentUser={currentUser}
           />
         )}
 
@@ -220,6 +293,7 @@ export default function App() {
             onViewHistory={(p) => setHistoryProject(p)}
             onDeleteProject={handleDeletePlanProject}
             onSaveNewProject={handleSavePlanProject}
+            currentUser={currentUser}
           />
         )}
 
@@ -234,7 +308,8 @@ export default function App() {
             onOpenRemainingBudgetReport={() => setIsRemainingBudgetModalOpen(true)}
             onOpenProjectDetail={(p) => setViewDetailProject(p)}
             onRevokeApproval={handleRevokeProjectApproval}
-            isAdmin={true}
+            isAdmin={currentUser?.role === 'admin'}
+            currentUser={currentUser}
           />
         )}
 
@@ -271,6 +346,14 @@ export default function App() {
           />
         )}
 
+        {/* Plan Budget Comparison Report View (รายงานเปรียบเทียบแผน/งบประมาณ) */}
+        {activeMenu === 'report_comparison' && (
+          <PlanBudgetComparisonReportView
+            projects={projects}
+            onOpenProjectDetail={(p) => setViewDetailProject(p)}
+          />
+        )}
+
         {/* Project Search View (ระบบสืบค้นโครงการแผนพัฒนาท้องถิ่น) */}
         {activeMenu === 'project_search' && (
           <ProjectSearchView
@@ -284,6 +367,38 @@ export default function App() {
           <VillagePlanView
             projects={projects}
             onViewProjectDetail={(p) => setViewDetailProject(p)}
+            onRestoreInitialData={() => {
+              const reset = storageService.resetToInitial();
+              setProjects(reset);
+            }}
+            onAddNewProject={(vNum) => {
+              const defaultV = vNum ? ALL_VILLAGES.find((v) => v.villageNumber === vNum) : undefined;
+              setFormProject(
+                defaultV
+                  ? ({
+                      villageNumber: defaultV.villageNumber,
+                      village: defaultV.villageName,
+                      zone: defaultV.zone
+                    } as any)
+                  : null
+              );
+              setFormTargetEdition('first');
+              setIsFormModalOpen(true);
+            }}
+            onUpdateProject={handleSavePlanProject}
+            currentUser={currentUser}
+            onSwitchToReport={() => setActiveMenu('village_plan_report')}
+          />
+        )}
+
+        {/* Village Plan Report View (รายงานแผนพัฒนารายหมู่บ้าน แบบ ผ.02 ทางการ 10 คอลัมน์) */}
+        {activeMenu === 'village_plan_report' && (
+          <VillagePlanReportView
+            projects={projects}
+            onOpenProjectDetail={(p) => setViewDetailProject(p)}
+            onUpdateProject={handleSavePlanProject}
+            currentUser={currentUser}
+            onSwitchToInteractive={() => setActiveMenu('village_plan')}
           />
         )}
 
@@ -294,6 +409,8 @@ export default function App() {
             trackingItems={trackingItems}
             onNavigateToMenu={(menu) => setActiveMenu(menu)}
             onViewProjectDetail={(p) => setViewDetailProject(p)}
+            currentUser={currentUser}
+            onOpenVisitorAnalytics={() => setIsVisitorAnalyticsOpen(true)}
           />
         )}
 
@@ -306,7 +423,9 @@ export default function App() {
           activeMenu !== 'approve_plan' &&
           activeMenu !== 'project_tracking' &&
           activeMenu !== 'village_plan' &&
+          activeMenu !== 'village_plan_report' &&
           activeMenu !== 'report_plan' &&
+          activeMenu !== 'report_comparison' &&
           activeMenu !== 'project_search' &&
           activeMenu !== 'dashboard' && (
             <OtherViews
@@ -329,7 +448,13 @@ export default function App() {
         onClose={() => setViewDetailProject(null)}
         onSave={handleSavePlanProject}
         onDelete={handleDeletePlanProject}
-        readOnly={viewDetailProject?.status === 'approved' || activeMenu === 'budget_approval'}
+        currentUser={currentUser}
+        readOnly={
+          viewDetailProject?.status === 'approved' ||
+          activeMenu === 'budget_approval' ||
+          currentUser?.role === 'public' ||
+          currentUser?.role === 'executive'
+        }
       />
 
       {/* Plan Project Form Modal (+ เพิ่ม / แก้ไข โครงการ) */}
@@ -342,13 +467,18 @@ export default function App() {
         onSave={handleSavePlanProject}
         initialProject={formProject}
         defaultEdition={formTargetEdition}
+        currentUser={currentUser}
+        readOnly={currentUser?.role === 'public' || currentUser?.role === 'executive'}
       />
 
       {/* Plan History Modal */}
       <PlanHistoryModal
         project={historyProject}
         onClose={() => setHistoryProject(null)}
+        currentUser={currentUser}
+        isPublic={currentUser?.role === 'public'}
         onOpenNewChange={(p) => {
+          if (currentUser?.role === 'public' || currentUser?.role === 'executive') return;
           setHistoryProject(null);
           setFormProject(p);
           setFormTargetEdition('changed');
@@ -389,6 +519,29 @@ export default function App() {
         onClose={() => setIsRemainingBudgetModalOpen(false)}
         projects={projects}
         year="2571"
+      />
+
+      {/* Authentication & User Switch Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        currentUser={currentUser}
+        onUserChanged={(user) => setCurrentUser(user)}
+        onOpenAnalytics={() => setIsVisitorAnalyticsOpen(true)}
+        initialTab={authModalTab}
+      />
+
+      {/* Public Citizen Access Modal */}
+      <PublicVisitorModal
+        isOpen={isPublicModalOpen}
+        onClose={() => setIsPublicModalOpen(false)}
+        onSuccess={(user) => setCurrentUser(user)}
+      />
+
+      {/* Visitor Analytics Modal */}
+      <VisitorAnalyticsModal
+        isOpen={isVisitorAnalyticsOpen}
+        onClose={() => setIsVisitorAnalyticsOpen(false)}
       />
     </div>
   );
