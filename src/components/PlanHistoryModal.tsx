@@ -13,12 +13,14 @@ import {
   TrendingUp,
   TrendingDown
 } from 'lucide-react';
-import { ProjectData, PlanEdition } from '../types';
+import { ProjectData, PlanEdition, UserAccount } from '../types';
 
 interface PlanHistoryModalProps {
   project: ProjectData | null;
   onClose: () => void;
   onOpenNewChange?: (project: ProjectData) => void;
+  currentUser?: UserAccount | null;
+  isPublic?: boolean;
 }
 
 interface ProjectVersionItem {
@@ -51,9 +53,13 @@ interface ProjectVersionItem {
 export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
   project,
   onClose,
-  onOpenNewChange
+  onOpenNewChange,
+  currentUser,
+  isPublic = false
 }) => {
   if (!project) return null;
+
+  const isPublicViewer = Boolean(isPublic || currentUser?.role === 'public');
 
   // Comparison toggle mode: 'previous' (ฉบับก่อนหน้า) or 'initial' (ฉบับตั้งต้น)
   const [compareMode, setCompareMode] = useState<'previous' | 'initial'>('previous');
@@ -283,23 +289,29 @@ export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2 shrink-0 ml-3">
-            {/* + บันทึกการเปลี่ยนแปลง/แก้ไขใหม่ */}
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenNewChange) {
-                  onOpenNewChange(project);
-                } else {
-                  alert(
-                    `บันทึกการเปลี่ยนแปลง/แก้ไขสำหรับ ${project.name}\nท่านสามารถใช้ฟังก์ชัน "แก้ไข/เปลี่ยนแปลงโครงการ" ในระบบเพื่อสร้างฉบับใหม่ได้`
-                  );
-                }
-              }}
-              className="hidden sm:inline-flex items-center gap-1.5 bg-[#007a5e] hover:bg-[#006853] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>บันทึกการเปลี่ยนแปลง/แก้ไขใหม่</span>
-            </button>
+            {/* Public viewer status badge or + บันทึกการเปลี่ยนแปลง/แก้ไขใหม่ */}
+            {isPublicViewer ? (
+              <span className="hidden sm:inline-flex items-center text-[11px] bg-[#022c22] text-emerald-300 border border-emerald-600/50 px-2.5 py-1 rounded-lg font-medium">
+                สิทธิ์ประชาชนทั่วไป (อ่านอย่างเดียว)
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenNewChange) {
+                    onOpenNewChange(project);
+                  } else {
+                    alert(
+                      `บันทึกการเปลี่ยนแปลง/แก้ไขสำหรับ ${project.name}\nท่านสามารถใช้ฟังก์ชัน "แก้ไข/เปลี่ยนแปลงโครงการ" ในระบบเพื่อสร้างฉบับใหม่ได้`
+                    );
+                  }
+                }}
+                className="hidden sm:inline-flex items-center gap-1.5 bg-[#007a5e] hover:bg-[#006853] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>บันทึกการเปลี่ยนแปลง/แก้ไขใหม่</span>
+              </button>
+            )}
 
             {/* Print Icon Button */}
             <button
@@ -519,9 +531,11 @@ export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
                     <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
                       <div className="flex items-center gap-1.5">
                         <span>1. ชื่อโครงการ</span>
-                        <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                          แก้ไข
-                        </span>
+                        {!isPublicViewer && (
+                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                            แก้ไข
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
@@ -541,9 +555,11 @@ export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
                     <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
                       <div className="flex items-center gap-1.5">
                         <span>2. วัตถุประสงค์</span>
-                        <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                          แก้ไข
-                        </span>
+                        {!isPublicViewer && (
+                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                            แก้ไข
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
@@ -559,9 +575,11 @@ export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
                     <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
                       <div className="flex items-center gap-1.5">
                         <span>3. เป้าหมาย (ผลผลิตของโครงการ)</span>
-                        <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                          แก้ไข
-                        </span>
+                        {!isPublicViewer && (
+                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                            แก้ไข
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
@@ -662,9 +680,11 @@ export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
                     <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
                       <div className="flex items-center gap-1.5">
                         <span>5. ผลที่คาดว่าจะได้รับ</span>
-                        <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                          แก้ไข
-                        </span>
+                        {!isPublicViewer && (
+                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                            แก้ไข
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
@@ -680,9 +700,11 @@ export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
                     <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
                       <div className="flex items-center gap-1.5">
                         <span>6. หน่วยงานรับผิดชอบหลัก</span>
-                        <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                          แก้ไข
-                        </span>
+                        {!isPublicViewer && (
+                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                            แก้ไข
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">

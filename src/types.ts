@@ -4,6 +4,8 @@ export type BudgetStatus = 'pending' | 'approved';
 
 export type PublishStatus = 'pending_publish' | 'published_first' | 'published_additional' | 'published_changed';
 
+export type ProjectExecutionStatus = 'in_progress' | 'completed' | 'cancelled' | 'not_started';
+
 export interface ProjectData {
   id: string;
   orderNumber: number;
@@ -30,7 +32,10 @@ export interface ProjectData {
   approvedDate: string; // วันที่อนุมัติ
   approvalOrderNo?: string; // เลขที่คำสั่ง/มติ
   status: BudgetStatus; // สถานะ: ยังไม่อนุมัติงบ, อนุมัติงบแล้ว
-  executionStatus?: 'completed' | 'in_progress' | 'not_started'; // สถานะการดำเนินงานโครงการ
+  executionStatus?: ProjectExecutionStatus; // สถานะการดำเนินงานโครงการ: in_progress | completed | cancelled | not_started
+  executionProgressNote?: string; // บันทึกหมายเหตุความก้าวหน้าโครงการ
+  executionUpdatedDate?: string; // วันที่อัปเดตสถานะการดำเนินงานล่าสุด
+  executionUpdatedBy?: string; // ผู้บันทึก/อัปเดตสถานะ (ชื่อ-สกุล และตำแหน่ง)
   department: string; // หน่วยงานรับผิดชอบ เช่น กองการศึกษา, กองช่าง
   year: string; // 2571 - 2575
   note?: string;
@@ -56,6 +61,7 @@ export interface ProjectData {
   zone?: string; // เช่น 'เขต 1', 'เขต 2', 'เขต 3'
   village?: string; // เช่น 'หมู่ที่ 1 บ้านโนนม่วง'
   villageNumber?: number; // 1 - 28
+  isBudgetAllocated?: boolean; // สถานะการนำไปตั้งงบประมาณ: true = ตั้งงบประมาณแล้ว, false = อยู่ในแผน (ยังไม่ตั้งงบ)
 }
 
 export interface FilterCriteria {
@@ -117,6 +123,31 @@ export interface ProjectTrackingItem {
   note?: string;
 }
 
+export type UserRole = 'admin' | 'staff' | 'executive' | 'public';
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  password?: string;
+  fullName: string;
+  role: UserRole;
+  department?: string; // One of 11 departments (for admin/staff/executive)
+  village?: string;    // e.g. 'หมู่ที่ 1 บ้านศิลา' (for public)
+  villageNumber?: number;
+  purpose?: string;    // e.g. 'ติดตามโครงการในหมู่บ้าน' (for public)
+  createdAt: string;
+  lastLoginAt?: string;
+}
+
+export interface VisitorLog {
+  id: string;
+  fullName: string;
+  village: string;
+  villageNumber?: number;
+  purpose: string;
+  timestamp: string; // Thai format or ISO string
+}
+
 export type ActiveNavMenu = 
   | 'dashboard'
   | 'edition_first'
@@ -127,7 +158,9 @@ export type ActiveNavMenu =
   | 'budget_approval'
   | 'project_tracking'
   | 'village_plan'
+  | 'village_plan_report'
   | 'report_plan'
+  | 'report_comparison'
   | 'project_search';
 
 export { DEVELOPMENT_STRATEGIES, DEPARTMENTS, SILA_ZONES, ALL_VILLAGES } from './utils/constants';

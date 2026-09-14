@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { ProjectData } from '../types';
 import { BUDGET_SOURCES } from '../utils/constants';
-import { getProjectDisplayId } from '../utils/projectCode';
 
 interface BudgetApprovalModalProps {
   project: ProjectData | null;
@@ -98,9 +97,6 @@ export const BudgetApprovalModal: React.FC<BudgetApprovalModalProps> = ({
         {/* Project Summary Card */}
         <div className="shrink-0 p-4 sm:p-5 bg-slate-50 border-b border-slate-200 text-xs text-slate-700 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="font-mono text-emerald-800 font-medium bg-emerald-50 text-xs px-2 py-0.5 rounded border border-emerald-200/80">
-              {getProjectDisplayId(project, project.orderNumber)}
-            </span>
             <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium text-[11px]">
               {project.department}
             </span>

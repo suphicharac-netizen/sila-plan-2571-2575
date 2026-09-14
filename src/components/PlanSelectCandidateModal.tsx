@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { ProjectData, PlanEdition } from '../types';
 import { DEVELOPMENT_STRATEGIES, DEPARTMENTS } from '../utils/constants';
-import { matchesProjectSearch, getProjectDisplayId } from '../utils/projectCode';
+import { matchesProjectSearch } from '../utils/projectCode';
 
 interface PlanSelectCandidateModalProps {
   isOpen: boolean;
@@ -149,7 +149,7 @@ export const PlanSelectCandidateModal: React.FC<PlanSelectCandidateModalProps> =
                     type="text"
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
-                    placeholder="ค้นหารหัส ID (เช่น ป.1-โยธา-001), ชื่อโครงการ, วัตถุประสงค์..."
+                    placeholder="ค้นหาชื่อโครงการ..."
                     className="w-full text-xs border border-slate-300 rounded-lg pl-8 pr-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                   />
                 </div>
@@ -273,11 +273,8 @@ export const PlanSelectCandidateModal: React.FC<PlanSelectCandidateModalProps> =
                         </span>
                       </div>
 
-                      {/* Project Name & Code */}
-                      <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug flex items-center gap-1.5 flex-wrap">
-                        <span className="font-mono text-emerald-800 font-medium bg-emerald-50 text-[11px] px-1.5 py-0.5 rounded border border-emerald-200/80">
-                          {getProjectDisplayId(project, project.orderNumber)}
-                        </span>
+                      {/* Project Name */}
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
                         <span>{project.name}</span>
                       </h3>
 

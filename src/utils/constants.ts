@@ -82,65 +82,65 @@ export const SILA_ZONES: ZoneInfo[] = [
   {
     id: 'zone_1',
     name: 'เขต 1',
-    fullName: 'เขตการปกครองที่ 1 (ทิศตะวันตกและใจกลางเมือง)',
-    description: 'พื้นที่ศูนย์กลางชุมชนโนนม่วง มหาวิทยาลัยขอนแก่น และชุมชนบ้านศิลาตอนใน',
+    fullName: 'เขตการปกครองที่ 1 (หนองกุง - โนนม่วง)',
+    description: 'พื้นที่ชุมชนบ้านหนองกุง และบ้านโนนม่วง',
     color: '#059669', // emerald
     badgeBg: 'bg-emerald-50',
     badgeBorder: 'border-emerald-200',
     badgeText: 'text-emerald-800',
     villages: [
-      { villageNumber: 1, villageName: 'หมู่ที่ 1 บ้านโนนม่วง', shortName: 'บ้านโนนม่วง', zone: 'เขต 1' },
-      { villageNumber: 2, villageName: 'หมู่ที่ 2 บ้านศิลา', shortName: 'บ้านศิลา', zone: 'เขต 1' },
-      { villageNumber: 3, villageName: 'หมู่ที่ 3 บ้านโนนชัย', shortName: 'บ้านโนนชัย', zone: 'เขต 1' },
-      { villageNumber: 13, villageName: 'หมู่ที่ 13 บ้านศิลาพัฒนา', shortName: 'บ้านศิลาพัฒนา', zone: 'เขต 1' },
-      { villageNumber: 14, villageName: 'หมู่ที่ 14 บ้านโนนม่วงพัฒนา', shortName: 'บ้านโนนม่วงพัฒนา', zone: 'เขต 1' },
-      { villageNumber: 15, villageName: 'หมู่ที่ 15 บ้านโนนม่วงสามัคคี', shortName: 'บ้านโนนม่วงสามัคคี', zone: 'เขต 1' },
-      { villageNumber: 17, villageName: 'หมู่ที่ 17 บ้านโนนชัยพัฒนา', shortName: 'บ้านโนนชัยพัฒนา', zone: 'เขต 1' },
-      { villageNumber: 18, villageName: 'หมู่ที่ 18 บ้านศิลาใหม่', shortName: 'บ้านศิลาใหม่', zone: 'เขต 1' },
-      { villageNumber: 27, villageName: 'หมู่ที่ 27 บ้านโนนม่วงทอง', shortName: 'บ้านโนนม่วงทอง', zone: 'เขต 1' },
-      { villageNumber: 28, villageName: 'หมู่ที่ 28 บ้านศิลาอุดมทรัพย์', shortName: 'บ้านศิลาอุดมทรัพย์', zone: 'เขต 1' }
+      { villageNumber: 2, villageName: 'หมู่ที่ 2 บ้านหนองกุง', shortName: 'บ้านหนองกุง', zone: 'เขต 1' },
+      { villageNumber: 3, villageName: 'หมู่ที่ 3 บ้านโนนม่วง', shortName: 'บ้านโนนม่วง', zone: 'เขต 1' },
+      { villageNumber: 12, villageName: 'หมู่ที่ 12 บ้านโนนม่วง', shortName: 'บ้านโนนม่วง', zone: 'เขต 1' },
+      { villageNumber: 19, villageName: 'หมู่ที่ 19 บ้านโนนม่วง', shortName: 'บ้านโนนม่วง', zone: 'เขต 1' },
+      { villageNumber: 23, villageName: 'หมู่ที่ 23 บ้านโนนม่วง', shortName: 'บ้านโนนม่วง', zone: 'เขต 1' },
+      { villageNumber: 27, villageName: 'หมู่ที่ 27 บ้านโนนม่วง', shortName: 'บ้านโนนม่วง', zone: 'เขต 1' }
     ]
   },
   {
     id: 'zone_2',
     name: 'เขต 2',
-    fullName: 'เขตการปกครองที่ 2 (ทิศตะวันออกและริมแม่น้ำพอง)',
-    description: 'พื้นที่ชุมชนโกทา หนองหิน ดอนหญ้านาง ท่าพระเนาว์ และขามเจริญ',
+    fullName: 'เขตการปกครองที่ 2 (ดอนหญ้านาง - หนองไผ่ - หนองกุง)',
+    description: 'พื้นที่ชุมชนบ้านดอนหญ้านาง บ้านหนองไผ่ และบ้านหนองกุง',
     color: '#0284c7', // sky
     badgeBg: 'bg-sky-50',
     badgeBorder: 'border-sky-200',
     badgeText: 'text-sky-800',
     villages: [
-      { villageNumber: 4, villageName: 'หมู่ที่ 4 บ้านโกทา', shortName: 'บ้านโกทา', zone: 'เขต 2' },
-      { villageNumber: 5, villageName: 'หมู่ที่ 5 บ้านหนองหิน', shortName: 'บ้านหนองหิน', zone: 'เขต 2' },
-      { villageNumber: 10, villageName: 'หมู่ที่ 10 บ้านดอนหญ้านาง', shortName: 'บ้านดอนหญ้านาง', zone: 'เขต 2' },
-      { villageNumber: 11, villageName: 'หมู่ที่ 11 บ้านท่าพระเนาว์', shortName: 'บ้านท่าพระเนาว์', zone: 'เขต 2' },
-      { villageNumber: 12, villageName: 'หมู่ที่ 12 บ้านโกทาพัฒนา', shortName: 'บ้านโกทาพัฒนา', zone: 'เขต 2' },
-      { villageNumber: 16, villageName: 'หมู่ที่ 16 บ้านขามเจริญ', shortName: 'บ้านขามเจริญ', zone: 'เขต 2' },
-      { villageNumber: 21, villageName: 'หมู่ที่ 21 บ้านหนองหินพัฒนา', shortName: 'บ้านหนองหินพัฒนา', zone: 'เขต 2' },
-      { villageNumber: 22, villageName: 'หมู่ที่ 22 บ้านดอนหญ้านางใหม่', shortName: 'บ้านดอนหญ้านางใหม่', zone: 'เขต 2' },
-      { villageNumber: 26, villageName: 'หมู่ที่ 26 บ้านท่าพระเนาว์เหนือ', shortName: 'บ้านท่าพระเนาว์เหนือ', zone: 'เขต 2' }
+      { villageNumber: 13, villageName: 'หมู่ที่ 13 บ้านดอนหญ้านาง', shortName: 'บ้านดอนหญ้านาง', zone: 'เขต 2' },
+      { villageNumber: 14, villageName: 'หมู่ที่ 14 บ้านหนองไผ่', shortName: 'บ้านหนองไผ่', zone: 'เขต 2' },
+      { villageNumber: 17, villageName: 'หมู่ที่ 17 บ้านหนองกุง', shortName: 'บ้านหนองกุง', zone: 'เขต 2' },
+      { villageNumber: 20, villageName: 'หมู่ที่ 20 บ้านดอนหญ้านาง', shortName: 'บ้านดอนหญ้านาง', zone: 'เขต 2' },
+      { villageNumber: 21, villageName: 'หมู่ที่ 21 บ้านหนองไผ่', shortName: 'บ้านหนองไผ่', zone: 'เขต 2' },
+      { villageNumber: 24, villageName: 'หมู่ที่ 24 บ้านหนองไผ่', shortName: 'บ้านหนองไผ่', zone: 'เขต 2' },
+      { villageNumber: 26, villageName: 'หมู่ที่ 26 บ้านหนองไผ่', shortName: 'บ้านหนองไผ่', zone: 'เขต 2' }
     ]
   },
   {
     id: 'zone_3',
     name: 'เขต 3',
-    fullName: 'เขตการปกครองที่ 3 (ทิศเหนือและพื้นที่เชื่อมต่อมิตรภาพ)',
-    description: 'พื้นที่ชุมชนหนองกุง หนองไผ่ เต่านอ และศูนย์บริการชุมชนตอนเหนือ',
+    fullName: 'เขตการปกครองที่ 3 (ศิลา - โกทา - หนองหิน - ห้วยซัน - ดอนยาง)',
+    description: 'พื้นที่ชุมชนบ้านศิลา โกทา หนองหิน ห้วยซัน ดอนยาง ดงพอง ท่าแก เต่านอ และเกษตร',
     color: '#7c3aed', // purple
     badgeBg: 'bg-purple-50',
     badgeBorder: 'border-purple-200',
     badgeText: 'text-purple-800',
     villages: [
-      { villageNumber: 6, villageName: 'หมู่ที่ 6 บ้านหนองกุง', shortName: 'บ้านหนองกุง', zone: 'เขต 3' },
-      { villageNumber: 7, villageName: 'หมู่ที่ 7 บ้านหนองกุงเหนือ', shortName: 'บ้านหนองกุงเหนือ', zone: 'เขต 3' },
-      { villageNumber: 8, villageName: 'หมู่ที่ 8 บ้านหนองไผ่', shortName: 'บ้านหนองไผ่', zone: 'เขต 3' },
-      { villageNumber: 9, villageName: 'หมู่ที่ 9 บ้านเต่านอ', shortName: 'บ้านเต่านอ', zone: 'เขต 3' },
-      { villageNumber: 19, villageName: 'หมู่ที่ 19 บ้านหนองกุงพัฒนา', shortName: 'บ้านหนองกุงพัฒนา', zone: 'เขต 3' },
-      { villageNumber: 20, villageName: 'หมู่ที่ 20 บ้านหนองไผ่พัฒนา', shortName: 'บ้านหนองไผ่พัฒนา', zone: 'เขต 3' },
-      { villageNumber: 23, villageName: 'หมู่ที่ 23 บ้านเต่านอพัฒนา', shortName: 'บ้านเต่านอพัฒนา', zone: 'เขต 3' },
-      { villageNumber: 24, villageName: 'หมู่ที่ 24 บ้านหนองไผ่ใหม่', shortName: 'บ้านหนองไผ่ใหม่', zone: 'เขต 3' },
-      { villageNumber: 25, villageName: 'หมู่ที่ 25 บ้านหนองกุงทอง', shortName: 'บ้านหนองกุงทอง', zone: 'เขต 3' }
+      { villageNumber: 1, villageName: 'หมู่ที่ 1 บ้านศิลา', shortName: 'บ้านศิลา', zone: 'เขต 3' },
+      { villageNumber: 4, villageName: 'หมู่ที่ 4 บ้านห้วยซัน', shortName: 'บ้านห้วยซัน', zone: 'เขต 3' },
+      { villageNumber: 5, villageName: 'หมู่ที่ 5 บ้านบึงอีเฒ่า', shortName: 'บ้านบึงอีเฒ่า', zone: 'เขต 3' },
+      { villageNumber: 6, villageName: 'หมู่ที่ 6 บ้านท่าแก', shortName: 'บ้านท่าแก', zone: 'เขต 3' },
+      { villageNumber: 7, villageName: 'หมู่ที่ 7 บ้านเต่านอ', shortName: 'บ้านเต่านอ', zone: 'เขต 3' },
+      { villageNumber: 8, villageName: 'หมู่ที่ 8 บ้านหนองหิน', shortName: 'บ้านหนองหิน', zone: 'เขต 3' },
+      { villageNumber: 9, villageName: 'หมู่ที่ 9 บ้านโกทา', shortName: 'บ้านโกทา', zone: 'เขต 3' },
+      { villageNumber: 10, villageName: 'หมู่ที่ 10 บ้านดงพอง', shortName: 'บ้านดงพอง', zone: 'เขต 3' },
+      { villageNumber: 11, villageName: 'หมู่ที่ 11 บ้านดอนยาง', shortName: 'บ้านดอนยาง', zone: 'เขต 3' },
+      { villageNumber: 15, villageName: 'หมู่ที่ 15 บ้านเกษตร', shortName: 'บ้านเกษตร', zone: 'เขต 3' },
+      { villageNumber: 16, villageName: 'หมู่ที่ 16 บ้านดอนยาง', shortName: 'บ้านดอนยาง', zone: 'เขต 3' },
+      { villageNumber: 18, villageName: 'หมู่ที่ 18 บ้านศิลา', shortName: 'บ้านศิลา', zone: 'เขต 3' },
+      { villageNumber: 22, villageName: 'หมู่ที่ 22 บ้านหนองหิน', shortName: 'บ้านหนองหิน', zone: 'เขต 3' },
+      { villageNumber: 25, villageName: 'หมู่ที่ 25 บ้านโกทา', shortName: 'บ้านโกทา', zone: 'เขต 3' },
+      { villageNumber: 28, villageName: 'หมู่ที่ 28 บ้านศิลา', shortName: 'บ้านศิลา', zone: 'เขต 3' }
     ]
   }
 ];

@@ -276,7 +276,7 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="ค้นหารหัส ID, ชื่อโครงการ..."
+                  placeholder="ค้นหาชื่อโครงการ..."
                   className="w-full h-8 py-1 pl-8 pr-7 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white text-slate-800"
                 />
                 {searchTerm && (
@@ -369,11 +369,7 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
               <table className="w-full text-left border-collapse budget-report-table">
                 <thead className="bg-slate-100/95 backdrop-blur-xs shadow-2xs print:bg-white">
                   <tr className="text-slate-800 text-xs font-semibold border-b border-slate-200 print:border-black">
-                    {/* 1. ID */}
-                    <th className="py-1.5 px-2 text-center w-24 border-r border-slate-200 print:border-black print:text-black font-medium">
-                      ID
-                    </th>
-                    {/* 2. ประเด็นการพัฒนา */}
+                    {/* 1. ประเด็นการพัฒนา */}
                     <th className="py-1.5 px-2.5 text-left border-r border-slate-200 print:border-black print:text-black w-48 sm:w-56">
                       ประเด็นการพัฒนา
                     </th>
@@ -400,7 +396,7 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                 <tbody className="divide-y divide-slate-100 text-xs print:hidden">
                   {paginatedProjects.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                      <td colSpan={5} className="py-8 text-center text-slate-400">
                         ไม่พบข้อมูลโครงการตามเงื่อนไขที่ระบุ
                       </td>
                     </tr>
@@ -415,26 +411,16 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                           key={project.id || `${project.code}-${index}`}
                           className="hover:bg-slate-50/80 transition-colors"
                         >
-                          {/* 1. ID */}
-                          <td className="py-1.5 px-2 text-center w-24 border-r border-slate-100 font-mono font-medium text-emerald-800 bg-emerald-50/20 whitespace-nowrap">
-                            {getProjectDisplayId(project, project.orderNumber || (currentPage - 1) * PAGE_SIZE + index + 1)}
-                          </td>
-
-                          {/* 2. ประเด็นการพัฒนา */}
+                          {/* 1. ประเด็นการพัฒนา */}
                           <td className="py-1.5 px-2.5 text-slate-700 leading-normal text-left border-r border-slate-100">
                             <span className="truncate block max-w-[200px]" title={project.planStrategy}>
                               {project.planStrategy || '-'}
                             </span>
                           </td>
 
-                          {/* 3. ชื่อโครงการ */}
+                          {/* 2. ชื่อโครงการ */}
                           <td className="py-1.5 px-2.5 text-left border-r border-slate-100 min-w-0">
                             <div className="font-medium text-slate-900 leading-normal flex items-center gap-1.5 min-w-0">
-                              {project.code && (
-                                <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[10px] px-1.5 py-0.5 rounded border border-emerald-200/80 shrink-0">
-                                  {project.code}
-                                </span>
-                              )}
                               <span className="truncate" title={project.name}>{project.name}</span>
                             </div>
                             <div className="text-[10px] text-slate-500 truncate mt-0.5">
@@ -471,9 +457,6 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
 
                     return (
                       <tr key={`print-${project.id || index}`}>
-                        <td className="py-1.5 px-2 text-center border border-black font-mono font-medium">
-                          {getProjectDisplayId(project, project.orderNumber || index + 1)}
-                        </td>
                         <td className="py-1.5 px-2.5 border border-black text-black">
                           {project.planStrategy || '-'}
                         </td>

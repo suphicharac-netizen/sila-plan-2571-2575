@@ -1,43 +1,12 @@
 import { ProjectData, PlanAnnouncement, ProjectTrackingItem } from '../types';
 import { INITIAL_PROJECTS, INITIAL_ANNOUNCEMENTS, INITIAL_TRACKING_ITEMS } from '../data/initialData';
+import { normalizeProjectVillageData } from '../utils/villageUtils';
 
-const STORAGE_KEY = 'sila_digital_plan_projects_v7';
+const STORAGE_KEY = 'sila_digital_plan_projects_v8';
 const ANNOUNCEMENTS_KEY = 'sila_digital_plan_announcements_v2';
 const TRACKING_KEY = 'sila_digital_plan_tracking_v3';
 const VERSION_KEY = 'sila_digital_plan_version';
-const CURRENT_VERSION = '2571_v19_village_hierarchy_drilldown';
-
-const normalizeZoneAndVillage = (p: ProjectData): ProjectData => {
-  if (p.zone && p.village) return p;
-  if (p.name?.includes('โกทา') || p.village?.includes('โกทา')) {
-    return { ...p, zone: 'เขต 2', village: 'หมู่ที่ 4 บ้านโกทา', villageNumber: 4 };
-  }
-  if (p.name?.includes('หนองหิน') || p.village?.includes('หนองหิน')) {
-    return { ...p, zone: 'เขต 2', village: 'หมู่ที่ 5 บ้านหนองหิน', villageNumber: 5 };
-  }
-  if (p.name?.includes('ดอนหญ้านาง') || p.village?.includes('ดอนหญ้านาง')) {
-    return { ...p, zone: 'เขต 2', village: 'หมู่ที่ 10 บ้านดอนหญ้านาง', villageNumber: 10 };
-  }
-  if (p.name?.includes('ท่าพระเนาว์') || p.village?.includes('ท่าพระเนาว์')) {
-    return { ...p, zone: 'เขต 2', village: 'หมู่ที่ 11 บ้านท่าพระเนาว์', villageNumber: 11 };
-  }
-  if (p.name?.includes('ขามเจริญ') || p.village?.includes('ขามเจริญ')) {
-    return { ...p, zone: 'เขต 2', village: 'หมู่ที่ 16 บ้านขามเจริญ', villageNumber: 16 };
-  }
-  if (p.name?.includes('หนองกุง') || p.village?.includes('หนองกุง')) {
-    return { ...p, zone: 'เขต 3', village: 'หมู่ที่ 6 บ้านหนองกุง', villageNumber: 6 };
-  }
-  if (p.name?.includes('หนองไผ่') || p.village?.includes('หนองไผ่')) {
-    return { ...p, zone: 'เขต 3', village: 'หมู่ที่ 8 บ้านหนองไผ่', villageNumber: 8 };
-  }
-  if (p.name?.includes('เต่านอ') || p.village?.includes('เต่านอ')) {
-    return { ...p, zone: 'เขต 3', village: 'หมู่ที่ 9 บ้านเต่านอ', villageNumber: 9 };
-  }
-  if (p.name?.includes('ศิลา') || p.village?.includes('ศิลา')) {
-    return { ...p, zone: 'เขต 1', village: 'หมู่ที่ 2 บ้านศิลา', villageNumber: 2 };
-  }
-  return { ...p, zone: 'เขต 1', village: 'หมู่ที่ 1 บ้านโนนม่วง', villageNumber: 1 };
-};
+const CURRENT_VERSION = '2571_v23_master_28_villages_synced';
 
 const normalizeBudgetSource = (source?: string): string => {
   if (!source) return '- ยังไม่ได้จัดสรร -';
@@ -72,7 +41,7 @@ export const storageService = {
       const parsed = JSON.parse(storedData);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((p: ProjectData) => {
-          const withZone = normalizeZoneAndVillage(p);
+          const withZone = normalizeProjectVillageData(p);
           return {
             ...withZone,
             budgetSource: normalizeBudgetSource(withZone.budgetSource)
@@ -146,10 +115,17 @@ export const storageService = {
   },
 
   resetToInitial(): ProjectData[] {
-    this.saveProjects(INITIAL_PROJECTS);
+    const normalized = INITIAL_PROJECTS.map((p) => {
+      const withZone = normalizeProjectVillageData(p);
+      return {
+        ...withZone,
+        budgetSource: normalizeBudgetSource(withZone.budgetSource)
+      };
+    });
+    this.saveProjects(normalized);
     this.saveAnnouncements(INITIAL_ANNOUNCEMENTS);
     this.saveTrackingItems(INITIAL_TRACKING_ITEMS);
-    return INITIAL_PROJECTS;
+    return normalized;
   },
 
   exportJSON(): string {

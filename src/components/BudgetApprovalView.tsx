@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
-import { ProjectData, FilterCriteria } from '../types';
+import { ProjectData, FilterCriteria, UserAccount } from '../types';
 import { DEVELOPMENT_STRATEGIES, BUDGET_SOURCES } from '../utils/constants';
 import { matchesProjectSearch, getProjectDisplayId } from '../utils/projectCode';
 
@@ -27,6 +27,7 @@ interface BudgetApprovalViewProps {
   onOpenProjectDetail?: (project: ProjectData) => void;
   onRevokeApproval?: (project: ProjectData) => void;
   isAdmin?: boolean;
+  currentUser?: UserAccount | null;
 }
 
 export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
@@ -35,7 +36,8 @@ export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
   onOpenRemainingBudgetReport,
   onOpenProjectDetail,
   onRevokeApproval,
-  isAdmin = true
+  isAdmin = true,
+  currentUser
 }) => {
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({
     year: '2571',
@@ -300,7 +302,7 @@ export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
                 <input
                   id="input-search-project"
                   type="text"
-                  placeholder="ค้นหารหัส ID (เช่น ป.1-โยธา-001), ชื่อโครงการ..."
+                  placeholder="ค้นหาชื่อโครงการ..."
                   value={filterCriteria.searchKeyword}
                   onChange={(e) =>
                     setFilterCriteria({ ...filterCriteria, searchKeyword: e.target.value })
@@ -519,7 +521,6 @@ export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-[#054e3b] text-white text-xs font-semibold tracking-wide sticky top-0 z-10">
-                  <th className="py-3 px-3 text-center w-28 border-r border-[#075f48] font-medium">ID</th>
                   <th className="py-3 px-4 w-52 border-r border-[#075f48]">ประเด็นการพัฒนา</th>
                   <th className="py-3 px-3 text-center w-32 border-r border-[#075f48]">
                     อนุมัติงบประมาณ
@@ -545,7 +546,7 @@ export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
               <tbody className="divide-y divide-slate-200 text-xs text-slate-700">
                 {filteredProjects.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-slate-400">
+                    <td colSpan={10} className="py-12 text-center text-slate-400">
                       ไม่พบข้อมูลโครงการตามเงื่อนไขที่ระบุ
                     </td>
                   </tr>
@@ -559,12 +560,7 @@ export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
                         className="hover:bg-emerald-50/40 transition-colors group cursor-pointer"
                         title="กดที่แถบโครงการเพื่อเปิดดูข้อมูล (Read-Only)"
                       >
-                        {/* 1. ID */}
-                        <td className="py-3.5 px-3 text-center w-28 font-mono font-medium text-emerald-800 whitespace-nowrap bg-emerald-50/20 border-r border-slate-100">
-                          {getProjectDisplayId(project, project.orderNumber || index + 1)}
-                        </td>
-
-                        {/* 2. ประเด็นการพัฒนา */}
+                        {/* 1. ประเด็นการพัฒนา */}
                         <td className="py-3.5 px-4 text-slate-700 leading-relaxed">
                           <span className="line-clamp-2" title={project.planStrategy}>
                             {project.planStrategy}
@@ -642,6 +638,14 @@ export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
                                 </div>
                               )}
                             </div>
+                          ) : currentUser?.role === 'public' || currentUser?.role === 'staff' ? (
+                            <span
+                              title="การอนุมัติตั้งงบประมาณสงวนไว้สำหรับผู้บริหาร (Executive) และผู้ดูแลระบบ (Admin)"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md select-none"
+                            >
+                              <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                              <span>รอผู้บริหารอนุมัติ</span>
+                            </span>
                           ) : (
                             <button
                               id={`btn-approve-${project.id}`}
@@ -660,11 +664,6 @@ export const BudgetApprovalView: React.FC<BudgetApprovalViewProps> = ({
                         {/* 4. ชื่อโครงการ */}
                         <td className="py-3.5 px-4">
                           <div className="font-medium text-slate-900 group-hover:text-emerald-900 leading-tight flex items-center gap-1.5 flex-wrap">
-                            {project.code && (
-                              <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[11px] px-1.5 py-0.5 rounded border border-emerald-200/80">
-                                {project.code}
-                              </span>
-                            )}
                             <span className="underline-offset-2 group-hover:underline">{project.name}</span>
                             <Eye className="w-3 h-3 text-slate-400 group-hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-0.5" />
                           </div>

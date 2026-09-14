@@ -1418,7 +1418,7 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                           type="text"
                           value={step2Search}
                           onChange={(e) => setStep2Search(e.target.value)}
-                          placeholder="ค้นหารหัส ID (เช่น ป.1-โยธา-001), ชื่อโครงการ..."
+                          placeholder="ค้นหาชื่อโครงการ..."
                           className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white shadow-2xs placeholder:text-slate-400"
                         />
                         {step2Search && (
@@ -1632,9 +1632,6 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                                 />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-mono text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                      {getProjectDisplayId(p, p.orderNumber)}
-                                    </span>
                                     <span
                                       onClick={() => handleToggleProject(p.id)}
                                       className="font-bold text-xs sm:text-sm text-slate-900 leading-snug cursor-pointer hover:text-emerald-800"
@@ -1747,12 +1744,9 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                             <div className="mt-2.5 pt-2 border-t border-slate-100 text-xs text-slate-600 space-y-2">
                               <div className="flex items-center justify-between">
                                 <div className="text-[11px] text-slate-500 flex items-center gap-2">
-                                  <span>
-                                    รหัส ID: <strong className="font-mono text-emerald-800">{getProjectDisplayId(p, p.orderNumber)}</strong>
-                                  </span>
                                   {p.planCategory && (
                                     <span>
-                                      • หมวด: <strong className="text-slate-700">{p.planCategory}</strong>
+                                      หมวด: <strong className="text-slate-700">{p.planCategory}</strong>
                                     </span>
                                   )}
                                 </div>
@@ -1852,7 +1846,6 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                                 title="เลือก/ยกเลิกทั้งหมดในผลค้นหานี้"
                               />
                             </th>
-                            <th className="py-3 px-3 w-28 text-center border-r border-[#075f48] font-medium">ID</th>
                             <th className="py-3 px-3 text-center w-28 border-r border-[#075f48]">ประเภทแผน</th>
                             <th className="py-3 px-3 border-r border-[#075f48] w-36">ประเด็นการพัฒนา</th>
                             <th className="py-3 px-4 border-r border-[#075f48]">ชื่อโครงการ</th>
@@ -1896,14 +1889,7 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                                   />
                                 </td>
 
-                                {/* 2. รหัสโครงการ / ID */}
-                                <td className="py-3 px-3 text-center border-r border-slate-100">
-                                  <span className="bg-emerald-50 px-2 py-0.5 rounded text-emerald-800 border border-emerald-200/80 font-mono text-xs font-semibold inline-block whitespace-nowrap">
-                                    {getProjectDisplayId(p, p.orderNumber)}
-                                  </span>
-                                </td>
-
-                                {/* 3. ประเภทแผน */}
+                                {/* 2. ประเภทแผน */}
                                 <td className="py-3 px-3 text-center border-r border-slate-100">
                                   {p.edition === 'additional' ? (
                                     <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -2209,7 +2195,6 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                           <thead className="bg-slate-100 text-slate-700 font-semibold sticky top-0 z-10 border-b border-slate-200">
                             <tr>
                               <th className="p-2.5 text-center w-10">ที่</th>
-                              <th className="p-2.5 w-28 text-center font-medium">ID</th>
                               <th className="p-2.5">ชื่อโครงการ</th>
                               <th className="p-2.5 w-32">หน่วยงาน</th>
                               <th className="p-2.5 text-right w-28">งบประมาณ 5 ปี</th>
@@ -2231,7 +2216,6 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                                 return (
                                   <tr key={p.id} className="hover:bg-slate-50">
                                     <td className="p-2.5 text-center text-slate-500">{idx + 1}</td>
-                                    <td className="p-2.5 font-mono text-emerald-800 font-medium text-center whitespace-nowrap bg-emerald-50/20">{getProjectDisplayId(p, p.orderNumber || idx + 1)}</td>
                                     <td className="p-2.5 font-semibold text-slate-900">{p.name}</td>
                                     <td className="p-2.5 text-slate-600">{p.department}</td>
                                     <td className="p-2.5 text-right font-mono font-bold text-slate-900">
@@ -2412,7 +2396,6 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                     <thead className="bg-slate-100 text-slate-700 font-semibold">
                       <tr>
                         <th className="p-2.5 text-center w-10">ที่</th>
-                        <th className="p-2.5 w-28 text-center font-medium">ID</th>
                         <th className="p-2.5">ชื่อโครงการ</th>
                         <th className="p-2.5">หน่วยงานหลัก</th>
                         <th className="p-2.5 text-right">งบประมาณ 5 ปี</th>
@@ -2428,7 +2411,6 @@ export const PlanApprovalAnnouncementView: React.FC<PlanApprovalAnnouncementView
                             onClick={() => onViewProjectDetail && onViewProjectDetail(p)}
                           >
                             <td className="p-2.5 text-center text-slate-500">{idx + 1}</td>
-                            <td className="p-2.5 font-mono text-emerald-800 font-medium text-center whitespace-nowrap bg-emerald-50/20">{getProjectDisplayId(p, p.orderNumber || idx + 1)}</td>
                             <td className="p-2.5 font-medium text-slate-900">{p.name}</td>
                             <td className="p-2.5 text-slate-600">{p.department}</td>
                             <td className="p-2.5 text-right font-mono font-bold text-slate-900">

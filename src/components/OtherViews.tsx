@@ -14,7 +14,9 @@ import {
   Calendar,
   Layers,
   Coins,
-  MapPin
+  MapPin,
+  ArrowLeftRight,
+  FileSpreadsheet
 } from 'lucide-react';
 import { ActiveNavMenu, ProjectData } from '../types';
 
@@ -78,6 +80,11 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
       subtitle: 'ส่งออกรายงานทางการและแบบพิมพ์ตามระเบียบกระทรวงมหาดไทย',
       icon: <BarChart3 className="w-5 h-5 text-emerald-600" />
     },
+    report_comparison: {
+      title: 'รายงานเปรียบเทียบแผน/งบประมาณ',
+      subtitle: 'รายงานสรุปผลการเปรียบเทียบโครงการตามแผนพัฒนาและโครงการที่อนุมัติงบประมาณ',
+      icon: <ArrowLeftRight className="w-5 h-5 text-emerald-600" />
+    },
     project_search: {
       title: 'ระบบสืบค้นและคัดกรองโครงการอัจฉริยะ',
       subtitle: 'ค้นหาโครงการตามยุทธศาสตร์ แผนงาน พิกัดชุมชน และงบประมาณ',
@@ -87,6 +94,11 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
       title: 'แผนพัฒนารายหมู่บ้าน (Zone Hierarchy)',
       subtitle: 'โครงสร้างการกระจายโครงการและงบประมาณระดับเขตและหมู่บ้าน (28 หมู่บ้าน 3 เขต)',
       icon: <MapPin className="w-5 h-5 text-emerald-600" />
+    },
+    village_plan_report: {
+      title: 'รายงานแผนพัฒนารายหมู่บ้าน (แบบ ผ.02)',
+      subtitle: 'แบบรายงานโครงการพัฒนาตามยุทธศาสตร์และแผนงานรายหมู่บ้าน 28 หมู่บ้าน เทศบาลเมืองศิลา',
+      icon: <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
     }
   };
 

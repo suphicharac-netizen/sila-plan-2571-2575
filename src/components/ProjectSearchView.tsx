@@ -561,11 +561,6 @@ export const ProjectSearchView: React.FC<ProjectSearchViewProps> = ({
                             onClick={() => onOpenProjectDetail(p)}
                             className="font-bold text-[#055740] hover:text-[#033627] hover:underline text-left cursor-pointer transition-colors block"
                           >
-                            {p.code && (
-                              <span className="font-mono text-emerald-800 font-bold mr-1.5 inline-block bg-emerald-50 text-[11px] px-1.5 py-0.5 rounded border border-emerald-200/80">
-                                {p.code}
-                              </span>
-                            )}
                             <span>{p.name}</span>
                           </button>
                         </td>

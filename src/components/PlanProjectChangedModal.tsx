@@ -5,10 +5,10 @@ import {
   Save,
   ArrowLeftRight
 } from 'lucide-react';
-import { ProjectData, PlanEdition } from '../types';
+import { ProjectData, PlanEdition, UserAccount } from '../types';
 import { DEVELOPMENT_STRATEGIES, DEPARTMENTS } from '../utils/constants';
 import { PLAN_CATEGORIES } from '../data/initialData';
-import { getProjectDisplayId } from '../utils/projectCode';
+// Removed unused getProjectDisplayId
 
 interface PlanProjectChangedModalProps {
   isOpen: boolean;
@@ -18,6 +18,8 @@ interface PlanProjectChangedModalProps {
   onSave?: (updatedProject: ProjectData) => void;
   onDelete?: (projectId: string) => void;
   readOnly?: boolean;
+  currentUser?: UserAccount | null;
+  isPublic?: boolean;
 }
 
 export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = ({
@@ -27,9 +29,18 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
   onClose,
   onSave,
   onDelete,
-  readOnly = false
+  readOnly = false,
+  currentUser,
+  isPublic = false
 }) => {
   if (!isOpen || !project) return null;
+
+  const isReadOnly = Boolean(
+    readOnly ||
+    isPublic ||
+    currentUser?.role === 'public' ||
+    currentUser?.role === 'executive'
+  );
 
   // Find original project if referenced
   const matchedOriginal = useMemo(() => {
@@ -310,10 +321,10 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden">
       <div
         id="modal-plan-project-changed"
-        className="bg-[#0b1329] rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-700/80 animate-in fade-in zoom-in-95 duration-150"
+        className="bg-[#0b1329] rounded-2xl shadow-2xl w-[95vw] lg:w-[95%] max-w-[1400px] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[94vh] border border-slate-700/80 animate-in fade-in zoom-in-95 duration-150"
       >
         {/* Header - Matches Screenshot */}
-        <div className="px-5 py-3 flex items-center justify-between border-b border-slate-800 shrink-0 bg-[#0b1329]">
+        <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-800 shrink-0 bg-[#0b1329]">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0">
               <ArrowLeftRight className="w-4 h-4" />
@@ -321,9 +332,6 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white tracking-wide flex items-center gap-2">
                 <span>แก้ไขข้อมูลโครงการ</span>
-                <span className="font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 text-xs px-2 py-0.5 rounded">
-                  {getProjectDisplayId(project, orderNum)}
-                </span>
               </h2>
               <div className="text-[11px] text-emerald-400 font-medium">
                 แผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) — ประเภทรายการ: {editionLabel}
@@ -342,18 +350,23 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
         </div>
 
         {/* Content Body */}
-        <div className="bg-white p-4 sm:p-5 overflow-y-auto flex-1 min-h-0 space-y-3.5 text-xs text-slate-800">
+        <div className="bg-white p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 space-y-4 text-xs sm:text-sm text-slate-800">
           {/* Top 4 Selectors Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             {/* 1. ปี พ.ศ. บรรจุแผน */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 ปี พ.ศ. บรรจุแผน
               </label>
               <select
                 value={year}
+                disabled={isReadOnly}
                 onChange={(e) => setYear(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer"
+                className={`w-full border rounded-lg px-3 py-2 text-xs sm:text-sm font-medium focus:ring-1 focus:ring-emerald-600 focus:outline-none ${
+                  isReadOnly
+                    ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                    : 'bg-white border-slate-300 text-slate-800 cursor-pointer'
+                }`}
               >
                 <option value="2571">พ.ศ. 2571</option>
                 <option value="2572">พ.ศ. 2572</option>
@@ -365,21 +378,26 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
 
             {/* 2. ประเภทรายการ */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 ประเภทรายการ
               </label>
               <div className="flex items-center gap-1.5">
                 <select
                   value={edition}
+                  disabled={isReadOnly}
                   onChange={(e) => setEdition(e.target.value as PlanEdition)}
-                  className="flex-1 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer"
+                  className={`flex-1 border rounded-lg px-3 py-2 text-xs sm:text-sm font-bold focus:ring-1 focus:ring-emerald-600 focus:outline-none ${
+                    isReadOnly
+                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                      : 'bg-white border-slate-300 text-emerald-700 cursor-pointer'
+                  }`}
                 >
                   <option value="changed">เปลี่ยนแปลง</option>
                   <option value="first">ฉบับแรก</option>
                   <option value="additional">เพิ่มเติม</option>
                   <option value="amended">แก้ไข</option>
                 </select>
-                <span className="bg-emerald-50 text-emerald-700 font-bold text-[11px] px-2 py-1.5 rounded border border-emerald-200 shrink-0">
+                <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-2 rounded border border-emerald-200 shrink-0">
                   ผ.02
                 </span>
               </div>
@@ -387,14 +405,19 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
 
             {/* 3. ประเด็นการพัฒนา (ยุทธศาสตร์) */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 ประเด็นการพัฒนา (ยุทธศาสตร์)
               </label>
               <select
                 value={planStrategy}
+                disabled={isReadOnly}
                 onChange={(e) => setPlanStrategy(e.target.value)}
                 title={planStrategy}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 truncate focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer"
+                className={`w-full border rounded-lg px-3 py-2 text-xs sm:text-sm truncate focus:ring-1 focus:ring-emerald-600 focus:outline-none ${
+                  isReadOnly
+                    ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                    : 'bg-white border-slate-300 text-slate-800 cursor-pointer'
+                }`}
               >
                 <option value="">-- เลือกประเด็นการพัฒนา --</option>
                 {DEVELOPMENT_STRATEGIES.map((st) => (
@@ -407,12 +430,17 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
 
             {/* 4. แผนงาน */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">แผนงาน</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">แผนงาน</label>
               <select
                 value={planCategory}
+                disabled={isReadOnly}
                 onChange={(e) => setPlanCategory(e.target.value)}
                 title={planCategory}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 truncate focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer"
+                className={`w-full border rounded-lg px-3 py-2 text-xs sm:text-sm truncate focus:ring-1 focus:ring-emerald-600 focus:outline-none ${
+                  isReadOnly
+                    ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                    : 'bg-white border-slate-300 text-slate-800 cursor-pointer'
+                }`}
               >
                 {PLAN_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -424,133 +452,188 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
           </div>
 
           {/* Two-Column Comparison Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-1">
             {/* LEFT COLUMN: ข้อมูลเดิม (ก่อนแก้ไข / ก่อนเปลี่ยนแปลง) */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                <span className="text-slate-400 text-sm leading-none">•</span>
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-700">
+                <span className="text-slate-400 text-base leading-none">•</span>
                 <span>ข้อมูลเดิม (ก่อน{actionVerb})</span>
               </div>
 
-              <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 space-y-3">
+              <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4">
                 {/* ชื่อโครงการ (เดิม) */}
                 <div>
-                  <label className="block text-[11px] text-slate-600 mb-1">
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
                     ชื่อโครงการ (เดิม)
                   </label>
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     value={origName}
+                    disabled={isReadOnly}
                     onChange={(e) => setOrigName(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-slate-400"
+                    placeholder="ชื่อโครงการเดิม..."
+                    className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm min-h-[58px] resize-y leading-relaxed focus:outline-none ${
+                      isReadOnly
+                        ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                        : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                    }`}
                   />
                 </div>
 
                 {/* Sub-row: วัตถุประสงค์ (เดิม) & เป้าหมาย (ผลผลิตเดิม) */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
                       วัตถุประสงค์ (เดิม)
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       value={origObjective}
+                      disabled={isReadOnly}
                       onChange={(e) => setOrigObjective(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-slate-400"
+                      placeholder="วัตถุประสงค์เดิม..."
+                      className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm min-h-[76px] resize-y leading-relaxed focus:outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
                       เป้าหมาย (ผลผลิตเดิม)
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       value={origTarget}
+                      disabled={isReadOnly}
                       onChange={(e) => setOrigTarget(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-slate-400"
+                      placeholder="เป้าหมายเดิม..."
+                      className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm min-h-[76px] resize-y leading-relaxed focus:outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                      }`}
                     />
                   </div>
                 </div>
 
                 {/* งบประมาณ 5 ปี เดิม */}
                 <div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-600 mb-1">
-                    <span>งบประมาณ 5 ปี เดิม</span>
-                    <span className="font-mono text-slate-500 font-medium">
+                  <div className="flex items-center justify-between text-xs text-slate-600 mb-1.5">
+                    <span className="font-semibold">งบประมาณ 5 ปี เดิม</span>
+                    <span className="font-mono text-slate-600 font-bold">
                       รวม: {origTotal.toLocaleString()} บ.
                     </span>
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  <div className="grid grid-cols-5 gap-2">
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 mb-0.5">2571</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2571</span>
                       <input
                         type="text"
                         value={origB71}
+                        disabled={isReadOnly}
                         onChange={(e) => setOrigB71(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-200 rounded-lg py-1 px-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-slate-400"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 mb-0.5">2572</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2572</span>
                       <input
                         type="text"
                         value={origB72}
+                        disabled={isReadOnly}
                         onChange={(e) => setOrigB72(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-200 rounded-lg py-1 px-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-slate-400"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 mb-0.5">2573</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2573</span>
                       <input
                         type="text"
                         value={origB73}
+                        disabled={isReadOnly}
                         onChange={(e) => setOrigB73(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-200 rounded-lg py-1 px-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-slate-400"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 mb-0.5">2574</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2574</span>
                       <input
                         type="text"
                         value={origB74}
+                        disabled={isReadOnly}
                         onChange={(e) => setOrigB74(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-200 rounded-lg py-1 px-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-slate-400"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-400 mb-0.5">2575</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2575</span>
                       <input
                         type="text"
                         value={origB75}
+                        disabled={isReadOnly}
                         onChange={(e) => setOrigB75(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-200 rounded-lg py-1 px-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-slate-400"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                        }`}
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Sub-row: ผลที่คาดว่าจะได้รับ (เดิม) & หน่วยงานรับผิดชอบ (เดิม) */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
                       ผลที่คาดว่าจะได้รับ (เดิม)
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       value={origExpected}
+                      disabled={isReadOnly}
                       onChange={(e) => setOrigExpected(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-slate-400"
+                      placeholder="ผลที่คาดว่าจะได้รับเดิม..."
+                      className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm min-h-[76px] resize-y leading-relaxed focus:outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">
+                    <label className="block text-xs font-medium text-slate-600 mb-1.5">
                       หน่วยงานรับผิดชอบ (เดิม)
                     </label>
                     <input
                       type="text"
                       value={origDept}
+                      disabled={isReadOnly}
                       onChange={(e) => setOrigDept(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-slate-400"
+                      placeholder="หน่วยงานรับผิดชอบเดิม..."
+                      className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-200 text-slate-800 focus:border-slate-400'
+                      }`}
                     />
                   </div>
                 </div>
@@ -559,67 +642,87 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
 
             {/* RIGHT COLUMN: ข้อมูลใหม่ (ที่ขอแก้ไข / ที่ขอเปลี่ยนแปลง) */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-700">
+              <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-emerald-700">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-emerald-500 text-sm leading-none">•</span>
+                  <span className="text-emerald-500 text-base leading-none">•</span>
                   <span>ข้อมูลใหม่ (ที่ขอ{actionVerb})</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCopyAllFromOld}
-                  className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold hover:underline cursor-pointer"
-                >
-                  คัดลอกจากเดิมทั้งหมด
-                </button>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={handleCopyAllFromOld}
+                    className="text-emerald-600 hover:text-emerald-800 text-xs font-semibold hover:underline cursor-pointer"
+                  >
+                    คัดลอกจากเดิมทั้งหมด
+                  </button>
+                )}
               </div>
 
-              <div className="bg-emerald-50/20 border border-emerald-300 rounded-xl p-3.5 space-y-3">
+              <div className="bg-emerald-50/20 border border-emerald-300 rounded-xl p-4 sm:p-5 space-y-4">
                 {/* ชื่อโครงการ (ใหม่) * */}
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                    ชื่อโครงการ (ใหม่) <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    ชื่อโครงการ (ใหม่) {!isReadOnly && <span className="text-rose-500">*</span>}
                   </label>
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     value={newName}
+                    disabled={isReadOnly}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full bg-white border border-emerald-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-medium focus:outline-none"
+                    placeholder="ระบุชื่อโครงการใหม่..."
+                    className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm font-medium focus:outline-none min-h-[58px] resize-y leading-relaxed ${
+                      isReadOnly
+                        ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                        : 'bg-white border-emerald-400 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                    }`}
                   />
                 </div>
 
                 {/* Sub-row: วัตถุประสงค์ (ใหม่) & เป้าหมาย (ผลผลิตใหม่) */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[11px] text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       วัตถุประสงค์ (ใหม่)
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       value={newObjective}
+                      disabled={isReadOnly}
                       onChange={(e) => setNewObjective(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none"
+                      placeholder="ระบุวัตถุประสงค์ใหม่..."
+                      className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm min-h-[76px] resize-y leading-relaxed focus:outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       เป้าหมาย (ผลผลิตใหม่)
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       value={newTarget}
+                      disabled={isReadOnly}
                       onChange={(e) => setNewTarget(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none"
+                      placeholder="ระบุเป้าหมายผลผลิตใหม่..."
+                      className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm min-h-[76px] resize-y leading-relaxed focus:outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                      }`}
                     />
                   </div>
                 </div>
 
                 {/* งบประมาณ 5 ปี ใหม่ (รวม: ... บ.) */}
                 <div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-700 mb-1">
-                    <span>งบประมาณ 5 ปี ใหม่ (รวม: {newTotal.toLocaleString()} บ.)</span>
+                  <div className="flex items-center justify-between text-xs text-slate-700 mb-1.5">
+                    <span className="font-semibold">งบประมาณ 5 ปี ใหม่ (รวม: {newTotal.toLocaleString()} บ.)</span>
                     {diff !== 0 && (
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold ${
                           diff > 0
                             ? 'bg-amber-100 text-amber-900 border border-amber-300'
                             : 'bg-rose-100 text-rose-900 border border-rose-300'
@@ -631,76 +734,112 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
+                  <div className="grid grid-cols-5 gap-2">
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-500 mb-0.5">2571</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2571</span>
                       <input
                         type="text"
                         value={newB71}
+                        disabled={isReadOnly}
                         onChange={(e) => setNewB71(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg py-1 px-1 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono font-bold focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-500 mb-0.5">2572</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2572</span>
                       <input
                         type="text"
                         value={newB72}
+                        disabled={isReadOnly}
                         onChange={(e) => setNewB72(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg py-1 px-1 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono font-bold focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-500 mb-0.5">2573</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2573</span>
                       <input
                         type="text"
                         value={newB73}
+                        disabled={isReadOnly}
                         onChange={(e) => setNewB73(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg py-1 px-1 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono font-bold focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-500 mb-0.5">2574</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2574</span>
                       <input
                         type="text"
                         value={newB74}
+                        disabled={isReadOnly}
                         onChange={(e) => setNewB74(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg py-1 px-1 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono font-bold focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                        }`}
                       />
                     </div>
                     <div className="text-center">
-                      <span className="block text-[10px] text-slate-500 mb-0.5">2575</span>
+                      <span className="block text-[11px] text-slate-500 mb-1">2575</span>
                       <input
                         type="text"
                         value={newB75}
+                        disabled={isReadOnly}
                         onChange={(e) => setNewB75(e.target.value)}
-                        className="w-full text-center bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg py-1 px-1 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        className={`w-full text-center border rounded-lg py-2 px-1 text-xs sm:text-sm font-mono font-bold focus:outline-none ${
+                          isReadOnly
+                            ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                            : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                        }`}
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Sub-row: ผลที่คาดว่าจะได้รับ (ใหม่) & หน่วยงานรับผิดชอบ (ใหม่) */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[11px] text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       ผลที่คาดว่าจะได้รับ (ใหม่)
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={3}
                       value={newExpected}
+                      disabled={isReadOnly}
                       onChange={(e) => setNewExpected(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none"
+                      placeholder="ระบุผลที่คาดว่าจะได้รับใหม่..."
+                      className={`w-full border rounded-lg px-3 py-2.5 text-xs sm:text-sm focus:outline-none min-h-[76px] resize-y leading-relaxed ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-700 mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                       หน่วยงานรับผิดชอบ (ใหม่)
                     </label>
                     <select
                       value={newDept}
+                      disabled={isReadOnly}
                       onChange={(e) => setNewDept(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none cursor-pointer"
+                      className={`w-full border rounded-lg px-3 py-2 text-xs sm:text-sm focus:outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'bg-white border-slate-300 text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer'
+                      }`}
                     >
                       {DEPARTMENTS.map((d) => (
                         <option key={d} value={d}>
@@ -714,25 +853,27 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
             </div>
           </div>
 
-          {/* Yellow Box: เหตุผลและความจำเป็น ที่ต้องแก้ไข / ที่ต้องเปลี่ยนแปลง */}
-          <div className="border border-amber-300 bg-[#fffbeb]/50 rounded-xl p-3 space-y-1">
-            <label className="block text-xs font-bold text-amber-800">
-              เหตุผลและความจำเป็น ที่ต้อง{actionVerb}
-            </label>
-            <input
-              type="text"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="ระบุเหตุผลความจำเป็นและข้อเท็จจริงประกอบการพิจารณา..."
-              className="w-full bg-white border border-amber-200 focus:border-amber-400 rounded-lg px-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
-            />
-          </div>
+          {/* Yellow Box: เหตุผลและความจำเป็น ที่ต้องแก้ไข / ที่ต้องเปลี่ยนแปลง - Hidden in Read-Only */}
+          {!isReadOnly && (
+            <div className="border border-amber-300 bg-[#fffbeb]/60 rounded-xl p-4 sm:p-5 space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-amber-900">
+                เหตุผลและความจำเป็น ที่ต้อง{actionVerb}
+              </label>
+              <textarea
+                rows={4}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="ระบุเหตุผลความจำเป็นและข้อเท็จจริงประกอบการพิจารณา..."
+                className="w-full bg-white border border-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-400/20 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none min-h-[96px] resize-y leading-relaxed"
+              />
+            </div>
+          )}
 
           {/* Footer Action Buttons */}
           <div className="pt-2 flex items-center justify-between">
-            {readOnly ? (
-              <span className="text-xs text-slate-500 font-medium bg-slate-100 px-2.5 py-1 rounded-md">
-                โหมดอ่านอย่างเดียว (Read-Only)
+            {isReadOnly ? (
+              <span className="text-xs text-slate-500 font-medium bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                โหมดอ่านอย่างเดียว (Read-Only) - ไม่สามารถแก้ไขได้
               </span>
             ) : (
               <button
@@ -751,9 +892,9 @@ export const PlanProjectChangedModal: React.FC<PlanProjectChangedModalProps> = (
                 onClick={onClose}
                 className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium cursor-pointer transition-colors"
               >
-                {readOnly ? 'ปิดหน้าต่าง' : 'ยกเลิก'}
+                {isReadOnly ? 'ปิดหน้าต่าง' : 'ยกเลิก'}
               </button>
-              {!readOnly && (
+              {!isReadOnly && (
                 <button
                   type="button"
                   onClick={handleSave}

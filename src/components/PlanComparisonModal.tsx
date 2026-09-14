@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   FileSpreadsheet
 } from 'lucide-react';
-import { ProjectData, PlanEdition } from '../types';
+import { ProjectData, PlanEdition, UserAccount } from '../types';
 import { DEVELOPMENT_STRATEGIES, DEPARTMENTS } from '../utils/constants';
 
 interface PlanComparisonModalProps {
@@ -17,6 +17,9 @@ interface PlanComparisonModalProps {
   candidateProject: ProjectData | null;
   edition: PlanEdition; // 'changed' or 'amended'
   onSave: (newProject: ProjectData) => void;
+  readOnly?: boolean;
+  currentUser?: UserAccount | null;
+  isPublic?: boolean;
 }
 
 export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
@@ -24,9 +27,19 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
   onClose,
   candidateProject,
   edition,
-  onSave
+  onSave,
+  readOnly = false,
+  currentUser,
+  isPublic = false
 }) => {
   if (!isOpen || !candidateProject) return null;
+
+  const isReadOnly = Boolean(
+    readOnly ||
+    isPublic ||
+    currentUser?.role === 'public' ||
+    currentUser?.role === 'executive'
+  );
 
   const isChanged = edition === 'changed';
   const actionLabel = isChanged ? 'เปลี่ยนแปลง' : 'แก้ไข';
@@ -89,6 +102,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     if (!name.trim()) return;
 
     const suffix = isChanged ? 'ป' : 'ก';
@@ -148,10 +162,10 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
       ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overflow-hidden">
       <div
         id="modal-plan-comparison-form"
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200"
+        className="bg-white rounded-2xl shadow-2xl w-[95vw] lg:w-[95%] max-w-[1400px] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[94vh] border border-slate-200"
       >
         {/* Modal Header */}
         <div className="bg-[#055740] px-6 py-4 flex items-center justify-between text-white shrink-0">
@@ -164,9 +178,14 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <h2 className="text-base sm:text-lg font-bold tracking-tight text-white">
                   แบบ ผ.02 บัญชีเปรียบเทียบโครงการพัฒนาท้องถิ่น (ฉบับ{actionLabel})
                 </h2>
-                <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-emerald-400/40 bg-emerald-800/60 text-emerald-200">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-400/40 bg-emerald-800/60 text-emerald-200">
                   บัญชีเปรียบเทียบสาระสำคัญ เดิม vs ใหม่
                 </span>
+                {isReadOnly && (
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-amber-400/40 bg-amber-500/20 text-amber-200">
+                    โหมดอ่านอย่างเดียว
+                  </span>
+                )}
               </div>
               <p className="text-xs text-emerald-100/90 mt-0.5">
                 เปรียบเทียบข้อมูลสาระสำคัญระหว่างโครงการเดิมในแผน กับโครงการที่ขออนุมัติ{actionLabel}
@@ -184,14 +203,14 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
         </div>
 
         {/* Modal Body: Two-Column Comparative Layout */}
-        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-5 bg-slate-50">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-7 space-y-5 bg-slate-50">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Column 1: Original Project Data (Read-Only) */}
-            <div className="bg-white border border-slate-300 rounded-xl p-4 sm:p-5 shadow-2xs space-y-4">
+            <div className="bg-white border border-slate-300 rounded-xl p-4 sm:p-6 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                  <h3 className="text-sm font-bold text-slate-800">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-800">
                     ข้อมูลเดิมในแผนพัฒนาท้องถิ่น
                   </h3>
                 </div>
@@ -202,10 +221,9 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
-                  รหัส / ชื่อโครงการเดิม
+                  ชื่อโครงการเดิม
                 </label>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-800 font-bold leading-relaxed">
-                  <span className="text-emerald-700 font-mono mr-2">[{candidateProject.code}]</span>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs sm:text-sm text-slate-800 font-bold leading-relaxed">
                   {candidateProject.name}
                 </div>
               </div>
@@ -214,7 +232,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                   ยุทธศาสตร์ / ประเด็นการพัฒนาเดิม
                 </label>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-slate-700">
                   {candidateProject.planStrategy}
                 </div>
               </div>
@@ -223,7 +241,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                   วัตถุประสงค์เดิม
                 </label>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 leading-relaxed min-h-[44px]">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-slate-700 leading-relaxed min-h-[64px]">
                   {candidateProject.objective || '-'}
                 </div>
               </div>
@@ -232,7 +250,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                   เป้าหมาย (ผลผลิต) เดิม
                 </label>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 leading-relaxed min-h-[44px]">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-slate-700 leading-relaxed min-h-[64px]">
                   {candidateProject.target || '-'}
                 </div>
               </div>
@@ -242,39 +260,39 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-500 mb-1.5">
                   งบประมาณเดิม (พ.ศ. 2571 - 2575)
                 </label>
-                <div className="grid grid-cols-5 gap-1 text-center bg-slate-50 p-2 rounded-lg border border-slate-200">
+                <div className="grid grid-cols-5 gap-2 text-center bg-slate-50 p-2.5 rounded-lg border border-slate-200">
                   <div>
-                    <span className="block text-[10px] text-slate-500">2571</span>
-                    <span className="font-mono text-xs font-bold text-slate-700">
+                    <span className="block text-[11px] text-slate-500 mb-0.5">2571</span>
+                    <span className="font-mono text-xs sm:text-sm font-bold text-slate-700">
                       {origSum.o71 > 0 ? origSum.o71.toLocaleString() : '-'}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-500">2572</span>
-                    <span className="font-mono text-xs font-bold text-slate-700">
+                    <span className="block text-[11px] text-slate-500 mb-0.5">2572</span>
+                    <span className="font-mono text-xs sm:text-sm font-bold text-slate-700">
                       {origSum.o72 > 0 ? origSum.o72.toLocaleString() : '-'}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-500">2573</span>
-                    <span className="font-mono text-xs font-bold text-slate-700">
+                    <span className="block text-[11px] text-slate-500 mb-0.5">2573</span>
+                    <span className="font-mono text-xs sm:text-sm font-bold text-slate-700">
                       {origSum.o73 > 0 ? origSum.o73.toLocaleString() : '-'}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-500">2574</span>
-                    <span className="font-mono text-xs font-bold text-slate-700">
+                    <span className="block text-[11px] text-slate-500 mb-0.5">2574</span>
+                    <span className="font-mono text-xs sm:text-sm font-bold text-slate-700">
                       {origSum.o74 > 0 ? origSum.o74.toLocaleString() : '-'}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-500">2575</span>
-                    <span className="font-mono text-xs font-bold text-slate-700">
+                    <span className="block text-[11px] text-slate-500 mb-0.5">2575</span>
+                    <span className="font-mono text-xs sm:text-sm font-bold text-slate-700">
                       {origSum.o75 > 0 ? origSum.o75.toLocaleString() : '-'}
                     </span>
                   </div>
                 </div>
-                <div className="mt-1.5 text-right text-xs text-slate-600 font-semibold">
+                <div className="mt-2 text-right text-xs sm:text-sm text-slate-600 font-semibold">
                   รวมงบประมาณเดิม 5 ปี:{' '}
                   <span className="font-mono text-slate-900 font-bold">
                     {origSum.total.toLocaleString()} บาท
@@ -286,7 +304,7 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                   ผลที่คาดว่าจะได้รับเดิม
                 </label>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 leading-relaxed min-h-[40px]">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-slate-700 leading-relaxed min-h-[64px]">
                   {candidateProject.expectedResults || '-'}
                 </div>
               </div>
@@ -295,19 +313,19 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-500 mb-1">
                   หน่วยงานรับผิดชอบเดิม
                 </label>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 flex items-center gap-2">
-                  <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-slate-700 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-slate-400" />
                   <span>{candidateProject.department}</span>
                 </div>
               </div>
             </div>
 
             {/* Column 2: New / Requested Changes (Editable Form) */}
-            <div className="bg-white border-2 border-emerald-600/60 rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
+            <div className="bg-white border-2 border-emerald-600/60 rounded-xl p-4 sm:p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-emerald-100 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-                  <h3 className="text-sm font-bold text-emerald-950">
+                  <h3 className="text-sm sm:text-base font-bold text-emerald-950">
                     ข้อมูลโครงการที่ขอ{actionLabel} (เสนออนุมัติใหม่)
                   </h3>
                 </div>
@@ -318,14 +336,19 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  ชื่อโครงการ (ใหม่) <span className="text-red-500">*</span>
+                  ชื่อโครงการ (ใหม่) {!isReadOnly && <span className="text-red-500">*</span>}
                 </label>
-                <input
-                  type="text"
-                  required
+                <textarea
+                  rows={2}
+                  required={!isReadOnly}
+                  disabled={isReadOnly}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full text-xs font-bold border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                  className={`w-full text-xs sm:text-sm font-bold border rounded-lg p-2.5 sm:p-3 min-h-[58px] resize-y leading-relaxed outline-none ${
+                    isReadOnly
+                      ? 'bg-slate-100 text-slate-600 cursor-not-allowed border-slate-200'
+                      : 'border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500 bg-white'
+                  }`}
                 />
               </div>
 
@@ -335,9 +358,14 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 </label>
                 <select
                   value={planStrategy}
+                  disabled={isReadOnly}
                   onChange={(e) => setPlanStrategy(e.target.value)}
                   title={planStrategy || '-- เลือกประเด็นการพัฒนา --'}
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 truncate"
+                  className={`w-full text-xs sm:text-sm border rounded-lg p-2.5 truncate outline-none ${
+                    isReadOnly
+                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                      : 'border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500'
+                  }`}
                 >
                   {DEVELOPMENT_STRATEGIES.map((s, idx) => (
                     <option key={idx} value={s} title={s}>
@@ -352,10 +380,15 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                   วัตถุประสงค์ (ใหม่)
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
+                  disabled={isReadOnly}
                   value={objective}
                   onChange={(e) => setObjective(e.target.value)}
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full text-xs sm:text-sm border rounded-lg p-2.5 sm:p-3 min-h-[76px] resize-y leading-relaxed outline-none ${
+                    isReadOnly
+                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                      : 'border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500'
+                  }`}
                   placeholder="ระบุวัตถุประสงค์..."
                 />
               </div>
@@ -365,10 +398,15 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                   เป้าหมาย (ผลผลิต) (ใหม่)
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
+                  disabled={isReadOnly}
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full text-xs sm:text-sm border rounded-lg p-2.5 sm:p-3 min-h-[76px] resize-y leading-relaxed outline-none ${
+                    isReadOnly
+                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                      : 'border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500'
+                  }`}
                   placeholder="ระบุเป้าหมายผลผลิตใหม่..."
                 />
               </div>
@@ -378,75 +416,100 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   งบประมาณใหม่แยกรายปี (บาท) พ.ศ. 2571 - 2575
                 </label>
-                <div className="grid grid-cols-5 gap-1.5 text-center bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-200">
+                <div className="grid grid-cols-5 gap-2 text-center bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
                   <div>
-                    <span className="block text-[10px] text-emerald-800 font-semibold mb-1">
+                    <span className="block text-[11px] text-emerald-800 font-semibold mb-1">
                       2571
                     </span>
                     <input
                       type="text"
+                      disabled={isReadOnly}
                       value={b2571}
                       onChange={(e) => setB2571(e.target.value)}
-                      className="w-full text-center border border-slate-300 rounded px-1.5 py-1 text-xs font-mono font-bold bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className={`w-full text-center border rounded-lg px-1.5 py-2 text-xs sm:text-sm font-mono font-bold outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'border-slate-300 bg-white focus:ring-2 focus:ring-emerald-500'
+                      }`}
                     />
                   </div>
                   <div>
-                    <span className="block text-[10px] text-emerald-800 font-semibold mb-1">
+                    <span className="block text-[11px] text-emerald-800 font-semibold mb-1">
                       2572
                     </span>
                     <input
                       type="text"
+                      disabled={isReadOnly}
                       value={b2572}
                       onChange={(e) => setB2572(e.target.value)}
-                      className="w-full text-center border border-slate-300 rounded px-1.5 py-1 text-xs font-mono font-bold bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className={`w-full text-center border rounded-lg px-1.5 py-2 text-xs sm:text-sm font-mono font-bold outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'border-slate-300 bg-white focus:ring-2 focus:ring-emerald-500'
+                      }`}
                     />
                   </div>
                   <div>
-                    <span className="block text-[10px] text-emerald-800 font-semibold mb-1">
+                    <span className="block text-[11px] text-emerald-800 font-semibold mb-1">
                       2573
                     </span>
                     <input
                       type="text"
+                      disabled={isReadOnly}
                       value={b2573}
                       onChange={(e) => setB2573(e.target.value)}
-                      className="w-full text-center border border-slate-300 rounded px-1.5 py-1 text-xs font-mono font-bold bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className={`w-full text-center border rounded-lg px-1.5 py-2 text-xs sm:text-sm font-mono font-bold outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'border-slate-300 bg-white focus:ring-2 focus:ring-emerald-500'
+                      }`}
                     />
                   </div>
                   <div>
-                    <span className="block text-[10px] text-emerald-800 font-semibold mb-1">
+                    <span className="block text-[11px] text-emerald-800 font-semibold mb-1">
                       2574
                     </span>
                     <input
                       type="text"
+                      disabled={isReadOnly}
                       value={b2574}
                       onChange={(e) => setB2574(e.target.value)}
-                      className="w-full text-center border border-slate-300 rounded px-1.5 py-1 text-xs font-mono font-bold bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className={`w-full text-center border rounded-lg px-1.5 py-2 text-xs sm:text-sm font-mono font-bold outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'border-slate-300 bg-white focus:ring-2 focus:ring-emerald-500'
+                      }`}
                     />
                   </div>
                   <div>
-                    <span className="block text-[10px] text-emerald-800 font-semibold mb-1">
+                    <span className="block text-[11px] text-emerald-800 font-semibold mb-1">
                       2575
                     </span>
                     <input
                       type="text"
+                      disabled={isReadOnly}
                       value={b2575}
                       onChange={(e) => setB2575(e.target.value)}
-                      className="w-full text-center border border-slate-300 rounded px-1.5 py-1 text-xs font-mono font-bold bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className={`w-full text-center border rounded-lg px-1.5 py-2 text-xs sm:text-sm font-mono font-bold outline-none ${
+                        isReadOnly
+                          ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                          : 'border-slate-300 bg-white focus:ring-2 focus:ring-emerald-500'
+                      }`}
                     />
                   </div>
                 </div>
 
                 {/* Diff Comparison */}
-                <div className="mt-2 flex items-center justify-between text-xs bg-slate-100 rounded-lg px-3 py-1.5">
+                <div className="mt-2.5 flex items-center justify-between text-xs sm:text-sm bg-slate-100 rounded-lg px-3.5 py-2">
                   <span className="font-semibold text-slate-700">
                     รวมงบประมาณใหม่:{' '}
-                    <strong className="text-emerald-700 font-mono text-sm">
+                    <strong className="text-emerald-700 font-mono text-sm sm:text-base">
                       {newBudgetSum.total.toLocaleString()}
                     </strong>{' '}
                     บาท
                   </span>
                   <span
-                    className={`font-mono text-xs font-bold px-2 py-0.5 rounded ${
+                    className={`font-mono text-xs font-bold px-2.5 py-1 rounded ${
                       newBudgetSum.diff > 0
                         ? 'bg-amber-100 text-amber-800'
                         : newBudgetSum.diff < 0
@@ -468,10 +531,15 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                   ผลที่คาดว่าจะได้รับ (ใหม่)
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
+                  disabled={isReadOnly}
                   value={expectedResults}
                   onChange={(e) => setExpectedResults(e.target.value)}
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full text-xs sm:text-sm border rounded-lg p-2.5 sm:p-3 min-h-[76px] resize-y leading-relaxed outline-none ${
+                    isReadOnly
+                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                      : 'border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500'
+                  }`}
                   placeholder="ระบุผลที่คาดว่าจะได้รับใหม่..."
                 />
               </div>
@@ -482,9 +550,14 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 </label>
                 <select
                   value={department}
+                  disabled={isReadOnly}
                   onChange={(e) => setDepartment(e.target.value)}
                   title={department || '-- เลือกหน่วยงานรับผิดชอบ --'}
-                  className="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 truncate"
+                  className={`w-full text-xs sm:text-sm border rounded-lg p-2.5 truncate outline-none ${
+                    isReadOnly
+                      ? 'bg-slate-100 text-slate-500 cursor-not-allowed border-slate-200'
+                      : 'border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500'
+                  }`}
                 >
                   {DEPARTMENTS.map((d, idx) => (
                     <option key={idx} value={d} title={d}>
@@ -494,66 +567,76 @@ export const PlanComparisonModal: React.FC<PlanComparisonModalProps> = ({
                 </select>
               </div>
 
-              {/* CRITICAL FIELD: เหตุผลความจำเป็นในการเปลี่ยนแปลง/แก้ไข */}
-              <div className="bg-amber-50/80 border border-amber-300 rounded-xl p-3.5 space-y-2">
-                <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>
-                    เหตุผลความจำเป็นในการ{actionLabel}โครงการ (จำเป็นต้องระบุตามระเบียบ){' '}
-                    <span className="text-red-500">*</span>
-                  </span>
-                </div>
-                <textarea
-                  rows={3}
-                  required
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder={`ระบุเหตุผลความจำเป็นในการขออนุมัติ${actionLabel}...`}
-                  className="w-full text-xs border border-amber-300 bg-white rounded-lg p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 leading-relaxed"
-                />
+              {/* CRITICAL FIELD: เหตุผลความจำเป็นในการเปลี่ยนแปลง/แก้ไข (ซ่อนในโหมดอ่านอย่างเดียว) */}
+              {!isReadOnly && (
+                <div className="bg-amber-50/80 border border-amber-300 rounded-xl p-4 sm:p-5 space-y-2.5">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      เหตุผลความจำเป็นในการ{actionLabel}โครงการ (จำเป็นต้องระบุตามระเบียบ){' '}
+                      <span className="text-red-500">*</span>
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    required
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder={`ระบุเหตุผลความจำเป็นในการขออนุมัติ${actionLabel}...`}
+                    className="w-full text-xs sm:text-sm border border-amber-300 bg-white rounded-lg p-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 leading-relaxed min-h-[96px] resize-y"
+                  />
 
-                {/* Quick tags */}
-                <div className="space-y-1">
-                  <span className="text-[11px] font-semibold text-amber-800">
-                    ข้อความแนะนำ:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {sampleReasons.map((r, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setReason(r)}
-                        className="text-[10px] bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 px-2 py-0.5 rounded transition-colors cursor-pointer text-left"
-                      >
-                        + {r}
-                      </button>
-                    ))}
+                  {/* Quick tags */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-xs font-semibold text-amber-800">
+                      ข้อความแนะนำ:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {sampleReasons.map((r, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setReason(r)}
+                          className="text-xs bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 px-2.5 py-1 rounded transition-colors cursor-pointer text-left"
+                        >
+                          + {r}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
             <div className="text-xs text-slate-500">
-              เมื่อบันทึก โครงการจะถูกบันทึกในบัญชีรายละเอียดแบบ ผ.02 (ฉบับ{actionLabel}) พร้อมตารางเปรียบเทียบ
+              {isReadOnly ? (
+                <span className="font-medium bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600">
+                  โหมดอ่านอย่างเดียว (Read-Only) - สิทธิ์เข้าชมทั่วไป ไม่สามารถบันทึกหรือแก้ไขได้
+                </span>
+              ) : (
+                `เมื่อบันทึก โครงการจะถูกบันทึกในบัญชีรายละเอียดแบบ ผ.02 (ฉบับ${actionLabel}) พร้อมตารางเปรียบเทียบ`
+              )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-medium border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs sm:text-sm font-medium border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded-lg transition-colors cursor-pointer"
               >
-                ยกเลิก
+                {isReadOnly ? 'ปิดหน้าต่าง' : 'ยกเลิก'}
               </button>
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#055740] hover:bg-[#034131] text-white rounded-lg shadow-xs transition-colors cursor-pointer"
-              >
-                <Save className="w-4 h-4" />
-                <span>บันทึกโครงการ (ฉบับ{actionLabel})</span>
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 text-xs sm:text-sm font-semibold bg-[#055740] hover:bg-[#034131] text-white rounded-lg shadow-xs transition-colors cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>บันทึกโครงการ (ฉบับ{actionLabel})</span>
+                </button>
+              )}
             </div>
           </div>
         </form>

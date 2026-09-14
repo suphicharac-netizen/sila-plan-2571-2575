@@ -1,11 +1,132 @@
 @import "tailwindcss";
 
+:root {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #111827;
+  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
 html, body, #root {
   height: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #111827;
+  background-color: #f8fafc;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base text color high-contrast */
+body, input, select, textarea, button {
+  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #111827;
+}
+
+/* =========================================================
+   2. Tables & Reports: Global Typography & Spacious Padding
+   ========================================================= */
+/* Table Headers: 17px - 18px Bold with Deep Emerald Green & Crisp White Text */
+table th,
+th {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  padding: 14px 16px !important;
+  letter-spacing: 0.01em;
+}
+
+/* Table Body Cells: 16px with Spacious 14px 16px Padding */
+table td,
+td {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  padding: 14px 16px !important;
+  color: #1f2937;
+}
+
+/* Keep dark green header background with clean white text on system tables */
+thead tr.bg-\[\#054e3b\],
+thead tr.bg-\[\#064e3b\],
+thead tr.bg-emerald-800,
+thead tr.bg-emerald-900,
+table thead th {
+  color: #ffffff !important;
+}
+
+/* Table footer summary rows */
+table tfoot td,
+table tfoot th {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  padding: 14px 16px !important;
+}
+
+/* =========================================================
+   3. Forms, Controls & Buttons: 16px font & Comfortable Size
+   ========================================================= */
+/* Form inputs, dropdowns, selects, and textareas */
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  min-height: 42px !important;
+  color: #111827 !important;
+}
+
+/* Form labels everywhere */
+label,
+.form-label {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  font-weight: 600 !important;
+  color: #1f2937 !important;
+}
+
+/* Standard button typography */
+button.btn-action,
+.action-btn,
+button[type="submit"],
+button[type="button"].btn-primary,
+button[type="button"].btn-secondary {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  min-height: 42px !important;
+  padding: 8px 16px !important;
+}
+
+/* =========================================================
+   4. Modals & Pop-up Dialogs Typography
+   ========================================================= */
+.modal-content,
+.modal-body {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.modal-content label {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.modal-content .text-xs,
+.modal-body .text-xs {
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+
+.modal-content .text-sm,
+.modal-body .text-sm {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
 }
 
 /* Custom sleek scrollbar for internal scrollable elements */
@@ -27,6 +148,23 @@ html, body, #root {
 @page {
   size: landscape;
   margin: 10mm;
+}
+
+/* Strategy Section Header & Report Table Styles (Both Screen & Print) */
+.strategy-section-header {
+  font-size: 16pt;
+  font-weight: bold;
+  margin-top: 18px;
+  margin-bottom: 10px;
+  text-align: left;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 24px;
 }
 
 @media print {
@@ -70,8 +208,32 @@ html, body, #root {
   }
 
   /* Official P.02 Local Plan Report Table Styles */
+  .strategy-section-header {
+    font-size: 14pt !important;
+    font-weight: bold !important;
+    margin-top: 15px !important;
+    margin-bottom: 8px !important;
+    text-align: left !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    color: #000000 !important;
+  }
+
+  .report-table,
+  table.report-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 20px !important;
+  }
+
   .p02-print-table,
-  table.p02-print-table,
+  table.p02-print-table {
+    border-collapse: collapse !important;
+    empty-cells: show !important;
+    width: 100% !important;
+    border: 1px solid #000000 !important;
+  }
+
   .p02-print-table th,
   .p02-print-table td {
     border: 1px solid #000000 !important;
@@ -90,12 +252,23 @@ html, body, #root {
     page-break-inside: avoid;
   }
 
+  .p02-print-table td.text-right,
+  .p02-print-table th.text-right {
+    text-align: right !important;
+  }
+
+  .p02-print-table td.text-center,
+  .p02-print-table th.text-center {
+    text-align: center !important;
+  }
+
   .p02-print-table tfoot tr,
   .p02-print-table tfoot td {
     background-color: #f8fafc !important;
     background: #f8fafc !important;
     color: #000000 !important;
     font-weight: 700 !important;
+    border: 1px solid #000000 !important;
     border-top: 2px solid #000000 !important;
     border-bottom: 2px solid #000000 !important;
   }

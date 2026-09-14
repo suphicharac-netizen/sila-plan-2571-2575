@@ -16,17 +16,21 @@ import {
   Table as TableIcon,
   Layers,
   Info,
-  X
+  X,
+  MapPin
 } from 'lucide-react';
-import { ProjectData, ActiveNavMenu, ProjectTrackingItem } from '../types';
+import { ProjectData, ActiveNavMenu, ProjectTrackingItem, UserAccount } from '../types';
 import { DEVELOPMENT_STRATEGIES, DEPARTMENTS } from '../utils/constants';
 import { matchesProjectSearch } from '../utils/projectCode';
+import { ProjectStatusWorkflowModal } from './ProjectStatusWorkflowModal';
 
 interface DashboardOverviewViewProps {
   projects: ProjectData[];
   trackingItems?: ProjectTrackingItem[];
   onNavigateToMenu: (menu: ActiveNavMenu) => void;
   onViewProjectDetail: (project: ProjectData) => void;
+  currentUser?: UserAccount | null;
+  onOpenVisitorAnalytics?: () => void;
 }
 
 type GroupByType = 'edition' | 'strategy' | 'category' | 'department';
@@ -37,7 +41,9 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
   projects,
   trackingItems = [],
   onNavigateToMenu,
-  onViewProjectDetail
+  onViewProjectDetail,
+  currentUser,
+  onOpenVisitorAnalytics
 }) => {
   // Filter States
   const [selectedYear, setSelectedYear] = useState<string>('all');
@@ -66,6 +72,9 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
     name: string;
     projects: ProjectData[];
   } | null>(null);
+
+  // Selected project for status & workflow timeline modal
+  const [selectedStatusProject, setSelectedStatusProject] = useState<ProjectData | null>(null);
 
   // Handle Search Trigger
   const handleApplySearch = () => {
@@ -402,28 +411,58 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
   return (
     <div className="flex-1 flex flex-col bg-slate-50 h-full min-h-0 overflow-hidden">
       {/* Top Banner Bar - Exactly matching reference screenshot */}
-      <header className="bg-[#055740] text-white px-4 py-2 sm:px-5 shadow-xs flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2.5">
+      <header className="bg-[#055740] text-white px-4 py-2.5 sm:px-6 shadow-xs flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
           {/* Logo badge "ศิลา" */}
-          <div className="px-2 py-0.5 rounded bg-[#086d50] border border-emerald-400/30 text-white font-bold text-xs tracking-wider shrink-0 shadow-xs select-none">
+          <div className="px-2.5 py-1 rounded-lg bg-[#086d50] border border-emerald-400/40 text-white font-bold text-sm tracking-wider shrink-0 shadow-xs select-none">
             ศิลา
           </div>
-          <h1 className="text-xs sm:text-sm font-semibold tracking-wide text-emerald-50 truncate">
+          <h1 className="text-sm sm:text-base md:text-lg font-bold tracking-wide text-emerald-50 truncate">
             หน้าหลักภาพรวมและสถิติ (Dashboard) <span className="mx-1 text-emerald-300/60">|</span> ระบบแผนพัฒนาเทศบาลเมืองศิลา <span className="mx-1 text-emerald-300/60">|</span> เทศบาลเมืองศิลา จ.ขอนแก่น
           </h1>
         </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => onNavigateToMenu('village_plan')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm sm:text-[15px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 shadow-xs transition-colors cursor-pointer"
+            title="เปิดดูแผนพัฒนารายหมู่บ้าน (3 เขต / 28 หมู่บ้าน)"
+          >
+            <MapPin className="w-4 h-4 text-emerald-200" />
+            <span className="hidden sm:inline">แผนพัฒนารายหมู่บ้าน (3 เขต)</span>
+            <span className="sm:hidden">รายหมู่บ้าน</span>
+          </button>
+
+          {currentUser && (currentUser.role === 'admin' || currentUser.role === 'executive') && onOpenVisitorAnalytics && (
+            <button
+              onClick={onOpenVisitorAnalytics}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm sm:text-[15px] font-bold bg-emerald-700/80 hover:bg-emerald-600 text-emerald-100 border border-emerald-500/40 shadow-xs transition-colors cursor-pointer"
+            >
+              <BarChart3 className="w-4 h-4 text-emerald-300" />
+              <span className="hidden sm:inline">สถิติผู้เข้าชมรายหมู่บ้าน</span>
+              <span className="sm:hidden">สถิติผู้เข้าชม</span>
+            </button>
+          )}
+
+          {currentUser && currentUser.role === 'public' && (
+            <div className="px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-teal-800/80 text-teal-100 border border-teal-600/40 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-teal-300 animate-pulse"></span>
+              <span>ประชาชนทั่วไป (Read-Only)</span>
+            </div>
+          )}
+        </div>
       </header>
 
-      <div className="flex-1 min-h-0 flex flex-col p-2.5 sm:p-3 space-y-2 w-full overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-4 space-y-3 w-full overflow-hidden">
         {/* Filter & Toolbar Card (Card 1) */}
-        <div className="bg-white border border-slate-200 rounded-xl p-2.5 sm:p-3 shadow-xs space-y-2 shrink-0">
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs space-y-3 shrink-0">
           {/* Row 1: ปีงบประมาณ Dropdown */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-slate-700 shrink-0">ปีงบประมาณ:</label>
+          <div className="flex items-center gap-3">
+            <label className="text-base font-bold text-slate-800 shrink-0">ปีงบประมาณ:</label>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="text-xs bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1 text-slate-800 font-medium focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer"
+              className="text-base bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-slate-800 font-semibold focus:ring-2 focus:ring-emerald-600 focus:outline-none cursor-pointer"
             >
               <option value="all">ทั้งหมด (2571-2575)</option>
               <option value="2571">พ.ศ. 2571</option>
@@ -435,15 +474,15 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
           </div>
 
           {/* Row 2: 4-Column Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-base">
             {/* Field 1: ประเด็นการพัฒนา */}
             <div>
-              <label className="block text-slate-600 font-medium mb-0.5 text-[11px]">ประเด็นการพัฒนา</label>
+              <label className="block text-slate-700 font-bold mb-1 text-[15px]">ประเด็นการพัฒนา</label>
               <select
                 value={selectedStrategy}
                 onChange={(e) => setSelectedStrategy(e.target.value)}
                 title={selectedStrategy === 'all' ? '-- ทุกประเด็นการพัฒนา --' : selectedStrategy}
-                className="w-full bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-slate-700 truncate focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer text-xs"
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 truncate focus:ring-2 focus:ring-emerald-600 focus:outline-none cursor-pointer text-base"
               >
                 <option value="all">-- ทุกประเด็นการพัฒนา --</option>
                 {DEVELOPMENT_STRATEGIES.map((st) => (
@@ -456,12 +495,12 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
 
             {/* Field 2: หน่วยงานรับผิดชอบหลัก */}
             <div>
-              <label className="block text-slate-600 font-medium mb-0.5 text-[11px]">หน่วยงานรับผิดชอบหลัก</label>
+              <label className="block text-slate-700 font-bold mb-1 text-[15px]">หน่วยงานรับผิดชอบหลัก</label>
               <select
                 value={selectedDepartment}
                 onChange={(e) => setSelectedDepartment(e.target.value)}
                 title={selectedDepartment === 'all' ? '-- ทุกหน่วยงาน --' : selectedDepartment}
-                className="w-full bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-slate-700 truncate focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer text-xs"
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 truncate focus:ring-2 focus:ring-emerald-600 focus:outline-none cursor-pointer text-base"
               >
                 <option value="all">-- ทุกหน่วยงาน --</option>
                 {DEPARTMENTS.map((dept) => (
@@ -474,102 +513,102 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
 
             {/* Field 3: ชื่อโครงการ / คำค้นหา */}
             <div>
-              <label className="block text-slate-600 font-medium mb-0.5 text-[11px]">ชื่อโครงการ / คำค้นหา</label>
+              <label className="block text-slate-700 font-bold mb-1 text-[15px]">ชื่อโครงการ / คำค้นหา</label>
               <div className="relative">
-                <Search className="w-3 h-3 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleApplySearch()}
-                  placeholder="ค้นหารหัส ID, ชื่อโครงการ..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded-md pl-7 pr-2 py-1 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-emerald-600 focus:outline-none text-xs"
+                  placeholder="ค้นหาชื่อโครงการ..."
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-emerald-600 focus:outline-none text-base"
                 />
               </div>
             </div>
 
             {/* Field 4: งบประมาณ (บาท) */}
             <div>
-              <label className="block text-slate-600 font-medium mb-0.5 text-[11px]">งบประมาณ (บาท)</label>
+              <label className="block text-slate-700 font-bold mb-1 text-[15px]">งบประมาณ (บาท)</label>
               <input
                 type="text"
                 value={budgetFilter}
                 onChange={(e) => setBudgetFilter(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleApplySearch()}
                 placeholder="ระบุจำนวนเงิน..."
-                className="w-full bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-slate-800 placeholder-slate-400 focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono text-xs"
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-emerald-600 focus:outline-none font-mono text-base"
               />
             </div>
           </div>
 
           {/* Row 3: Actions & Segmentation & View Tabs */}
-          <div className="pt-1.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-base">
             {/* Left: Action Buttons + Segmented Button */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleApplySearch}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-[#055740] hover:bg-[#044834] text-white font-medium rounded-md shadow-xs transition-colors cursor-pointer text-xs"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#055740] hover:bg-[#044834] text-white font-bold rounded-lg shadow-xs transition-colors cursor-pointer text-base"
               >
-                <Search className="w-3 h-3" />
+                <Search className="w-4 h-4" />
                 <span>ค้นหา</span>
               </button>
 
               <button
                 onClick={handleShowAll}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-md transition-colors cursor-pointer text-xs"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold rounded-lg transition-colors cursor-pointer text-base"
               >
-                <Layers className="w-3 h-3 text-slate-500" />
+                <Layers className="w-4 h-4 text-slate-600" />
                 <span>แสดงทั้งหมด</span>
               </button>
 
               <button
                 onClick={handleResetFilters}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-white border border-amber-300 hover:bg-amber-50 text-amber-700 font-medium rounded-md transition-colors cursor-pointer text-xs"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-amber-300 hover:bg-amber-50 text-amber-700 font-bold rounded-lg transition-colors cursor-pointer text-base"
               >
-                <RotateCcw className="w-3 h-3 text-amber-600" />
+                <RotateCcw className="w-4 h-4 text-amber-600" />
                 <span>เริ่มใหม่</span>
               </button>
 
               {/* Segmented Toggles */}
-              <div className="flex items-center gap-1 pl-2 ml-1 border-l border-slate-200">
-                <span className="text-slate-500 text-[11px] mr-1 hidden sm:inline">จำแนกตาม:</span>
-                <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-slate-50">
+              <div className="flex items-center gap-2 pl-3 ml-1 border-l border-slate-200">
+                <span className="text-slate-600 text-sm sm:text-[15px] font-semibold mr-1 hidden sm:inline">จำแนกตาม:</span>
+                <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
                   <button
                     onClick={() => setGroupBy('edition')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-sm sm:text-[15px] transition-colors cursor-pointer ${
                       groupBy === 'edition'
-                        ? 'bg-[#055740] text-white shadow-xs font-semibold'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-[#055740] text-white shadow-xs font-bold'
+                        : 'text-slate-700 font-medium hover:text-slate-900'
                     }`}
                   >
                     ประเภทโครงการ
                   </button>
                   <button
                     onClick={() => setGroupBy('strategy')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-sm sm:text-[15px] transition-colors cursor-pointer ${
                       groupBy === 'strategy'
-                        ? 'bg-[#055740] text-white shadow-xs font-semibold'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-[#055740] text-white shadow-xs font-bold'
+                        : 'text-slate-700 font-medium hover:text-slate-900'
                     }`}
                   >
                     ประเด็นยุทธศาสตร์
                   </button>
                   <button
                     onClick={() => setGroupBy('category')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-sm sm:text-[15px] transition-colors cursor-pointer ${
                       groupBy === 'category'
-                        ? 'bg-[#055740] text-white shadow-xs font-semibold'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-[#055740] text-white shadow-xs font-bold'
+                        : 'text-slate-700 font-medium hover:text-slate-900'
                     }`}
                   >
                     แผนงาน
                   </button>
                   <button
                     onClick={() => setGroupBy('department')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+                    className={`px-3 py-1 rounded-md text-sm sm:text-[15px] transition-colors cursor-pointer ${
                       groupBy === 'department'
-                        ? 'bg-[#055740] text-white shadow-xs font-semibold'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-[#055740] text-white shadow-xs font-bold'
+                        : 'text-slate-700 font-medium hover:text-slate-900'
                     }`}
                   >
                     สำนัก/กอง
@@ -579,9 +618,9 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
             </div>
 
             {/* Right: Date pill & View tabs */}
-            <div className="flex items-center gap-1.5">
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-[11px]">
-                <Calendar className="w-3 h-3 text-slate-500" />
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-sm sm:text-[15px] font-semibold">
+                <Calendar className="w-4 h-4 text-slate-500" />
                 <span>
                   {appliedFilters.year === 'all'
                     ? 'รวม 5 ปี (2571-2575)'
@@ -589,38 +628,38 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
                 </span>
               </div>
 
-              <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-slate-50">
+              <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
                 <button
                   onClick={() => setActiveTab('overview_budget')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm sm:text-[15px] transition-colors cursor-pointer ${
                     activeTab === 'overview_budget'
-                      ? 'bg-[#055740] text-white shadow-xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#055740] text-white shadow-xs font-bold'
+                      : 'text-slate-700 font-medium hover:text-slate-900'
                   }`}
                 >
-                  <BarChart3 className="w-3 h-3" />
+                  <BarChart3 className="w-4 h-4" />
                   <span>ภาพรวม & งบประมาณ</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('department_workload')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm sm:text-[15px] transition-colors cursor-pointer ${
                     activeTab === 'department_workload'
-                      ? 'bg-[#055740] text-white shadow-xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#055740] text-white shadow-xs font-bold'
+                      : 'text-slate-700 font-medium hover:text-slate-900'
                   }`}
                 >
-                  <Building2 className="w-3 h-3" />
+                  <Building2 className="w-4 h-4" />
                   <span>หน่วยงาน & ภาระงาน</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('recent_projects')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-sm sm:text-[15px] transition-colors cursor-pointer ${
                     activeTab === 'recent_projects'
-                      ? 'bg-[#055740] text-white shadow-xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#055740] text-white shadow-xs font-bold'
+                      : 'text-slate-700 font-medium hover:text-slate-900'
                   }`}
                 >
-                  <Clock className="w-3 h-3" />
+                  <Clock className="w-4 h-4" />
                   <span>โครงการล่าสุด</span>
                 </button>
               </div>
@@ -628,89 +667,89 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
           </div>
         </div>
 
-        {/* 5 KPI Metric Summary Cards (Card 2) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 shrink-0">
+        {/* 5 KPI Metric Summary Cards (Card 2) - 28px - 32px Stat Numbers & 16px Labels */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shrink-0">
           {/* Card 1: โครงการทั้งหมดในแผน */}
-          <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-xs flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-[11px] text-slate-500 font-medium truncate">โครงการทั้งหมดในแผน</div>
-              <div className="text-base sm:text-lg font-bold font-mono text-slate-900 mt-0.5 leading-tight">
+              <div className="text-[16px] text-slate-700 font-bold truncate">โครงการทั้งหมดในแผน</div>
+              <div className="text-[28px] sm:text-[32px] font-bold font-mono text-slate-900 mt-1 leading-none">
                 {totalProjectsCount}
               </div>
-              <div className="text-[10px] text-slate-400">
+              <div className="text-[14px] text-slate-500 mt-1">
                 (ทุกฉบับรวมกัน)
               </div>
             </div>
-            <div className="w-7 h-7 rounded-full bg-sky-50 border border-sky-200/60 flex items-center justify-center shrink-0">
-              <Layers className="w-3.5 h-3.5 text-sky-600" />
+            <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-200/80 flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5 text-sky-600" />
             </div>
           </div>
 
           {/* Card 2: เสร็จสิ้น / บรรลุผล */}
-          <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-xs flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-[11px] text-slate-500 font-medium truncate">เสร็จสิ้น / บรรลุผล</div>
-              <div className="text-base sm:text-lg font-bold font-mono text-emerald-600 mt-0.5 leading-tight">
-                {statusStats.completed} <span className="text-xs font-semibold">({statusStats.completedPct}%)</span>
+              <div className="text-[16px] text-slate-700 font-bold truncate">เสร็จสิ้น / บรรลุผล</div>
+              <div className="text-[28px] sm:text-[32px] font-bold font-mono text-emerald-600 mt-1 leading-none">
+                {statusStats.completed} <span className="text-base font-semibold">({statusStats.completedPct}%)</span>
               </div>
-              <div className="text-[10px] text-emerald-600/80">
+              <div className="text-[14px] text-emerald-700 mt-1 font-medium">
                 (ดำเนินการแล้วเสร็จ)
               </div>
             </div>
-            <div className="w-7 h-7 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
+              <Check className="w-5 h-5 text-emerald-600" />
             </div>
           </div>
 
           {/* Card 3: กำลังดำเนินการ */}
-          <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-xs flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-[11px] text-slate-500 font-medium truncate">กำลังดำเนินการ</div>
-              <div className="text-base sm:text-lg font-bold font-mono text-amber-600 mt-0.5 leading-tight">
-                {statusStats.inProgress} <span className="text-xs font-semibold">({statusStats.inProgressPct}%)</span>
+              <div className="text-[16px] text-slate-700 font-bold truncate">กำลังดำเนินการ</div>
+              <div className="text-[28px] sm:text-[32px] font-bold font-mono text-amber-600 mt-1 leading-none">
+                {statusStats.inProgress} <span className="text-base font-semibold">({statusStats.inProgressPct}%)</span>
               </div>
-              <div className="text-[10px] text-amber-600/80">
+              <div className="text-[14px] text-amber-700 mt-1 font-medium">
                 (อยู่ระหว่างดำเนินการ)
               </div>
             </div>
-            <div className="w-7 h-7 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-              <Clock className="w-3.5 h-3.5 text-amber-600" />
+            <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5 text-amber-600" />
             </div>
           </div>
 
           {/* Card 4: ไม่ดำเนินการ / รอจัดสรร */}
-          <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-xs flex items-center justify-between">
+          <div className="bg-white border border-slate-200 rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between">
             <div className="min-w-0">
-              <div className="text-[11px] text-slate-500 font-medium truncate">ไม่ดำเนินการ / รอจัดสรร</div>
-              <div className="text-base sm:text-lg font-bold font-mono text-rose-600 mt-0.5 leading-tight">
-                {statusStats.notStarted} <span className="text-xs font-semibold">({statusStats.notStartedPct}%)</span>
+              <div className="text-[16px] text-slate-700 font-bold truncate">ไม่ดำเนินการ / รอจัดสรร</div>
+              <div className="text-[28px] sm:text-[32px] font-bold font-mono text-rose-600 mt-1 leading-none">
+                {statusStats.notStarted} <span className="text-base font-semibold">({statusStats.notStartedPct}%)</span>
               </div>
-              <div className="text-[10px] text-rose-500/80">
+              <div className="text-[14px] text-rose-600 mt-1 font-medium">
                 (ยังไม่ได้เริ่มดำเนินการ)
               </div>
             </div>
-            <div className="w-7 h-7 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
-              <span className="w-3.5 h-3.5 rounded-full border-2 border-dotted border-rose-500" />
+            <div className="w-10 h-10 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center shrink-0">
+              <span className="w-4 h-4 rounded-full border-2 border-dotted border-rose-500" />
             </div>
           </div>
 
           {/* Card 5: งบรวม 5 ปี (Dark themed as shown in image) */}
-          <div className="bg-[#032e28] border border-[#064e3b] text-white rounded-xl p-2.5 shadow-xs flex items-center justify-between col-span-2 sm:col-span-1">
+          <div className="bg-[#032e28] border border-[#064e3b] text-white rounded-xl p-3.5 sm:p-4 shadow-xs flex items-center justify-between col-span-2 sm:col-span-1">
             <div className="min-w-0">
-              <div className="text-[11px] text-emerald-300 font-medium truncate">
+              <div className="text-[16px] text-emerald-300 font-bold truncate">
                 {appliedFilters.year === 'all' ? 'งบรวม 5 ปี (2571-2575)' : `งบรวมปี ${appliedFilters.year}`}
               </div>
-              <div className="text-sm sm:text-base font-bold font-mono text-white mt-0.5 tracking-tight truncate">
-                {total5YearBudget.toLocaleString()} บาท
+              <div className="text-[22px] sm:text-[26px] font-bold font-mono text-white mt-1 tracking-tight truncate leading-none">
+                {total5YearBudget.toLocaleString()} <span className="text-sm font-normal text-emerald-200">บาท</span>
               </div>
-              <div className="text-[10px] text-emerald-300/80 truncate">
+              <div className="text-[14px] text-emerald-300/90 truncate mt-1">
                 {appliedFilters.year === 'all'
-                  ? '(งบรวม 5 ปี ทุกโครงการในแผน)'
+                  ? '(งบรวม 5 ปี ทุกโครงการ)'
                   : `(งบประมาณปี ${appliedFilters.year})`}
               </div>
             </div>
-            <div className="w-7 h-7 rounded-full bg-[#064e3b] border border-emerald-600/40 flex items-center justify-center shrink-0">
-              <Coins className="w-4 h-4 text-emerald-300" />
+            <div className="w-10 h-10 rounded-full bg-[#064e3b] border border-emerald-600/40 flex items-center justify-center shrink-0">
+              <Coins className="w-5 h-5 text-emerald-300" />
             </div>
           </div>
         </div>
@@ -782,35 +821,35 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
 
               {/* Sub-KPI stats row (4 boxes inside chart card) */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
-                <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500">ยอดงบประมาณรวม (5 ปี)</div>
-                  <div className="text-base sm:text-lg font-bold font-mono text-emerald-700 mt-0.5">
+                <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3.5">
+                  <div className="text-[14px] sm:text-[15px] text-slate-600 font-semibold">ยอดงบประมาณรวม (5 ปี)</div>
+                  <div className="text-lg sm:text-xl font-bold font-mono text-emerald-700 mt-1">
                     ฿{total5YearBudget.toLocaleString()}
                   </div>
                 </div>
 
-                <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500">จำนวนโครงการทั้งหมด</div>
-                  <div className="text-base sm:text-lg font-bold font-mono text-slate-800 mt-0.5">
+                <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3.5">
+                  <div className="text-[14px] sm:text-[15px] text-slate-600 font-semibold">จำนวนโครงการทั้งหมด</div>
+                  <div className="text-lg sm:text-xl font-bold font-mono text-slate-900 mt-1">
                     {totalProjectsCount} โครงการ
                   </div>
                 </div>
 
-                <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500">หมวดที่ใช้งบประมาณสูงสุด</div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-0.5">
+                <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3.5">
+                  <div className="text-[14px] sm:text-[15px] text-slate-600 font-semibold">หมวดที่ใช้งบประมาณสูงสุด</div>
+                  <div className="text-sm sm:text-base font-bold text-slate-900 truncate mt-1">
                     {highestCategory ? highestCategory.label : '-'}
                   </div>
                   {highestCategory && (
-                    <div className="text-[11px] font-semibold text-emerald-600">
+                    <div className="text-[13px] sm:text-[14px] font-semibold text-emerald-600 mt-0.5">
                       {highestCategory.percentage}% (฿{(highestCategory.amount / 1000000).toFixed(2)} ลบ.)
                     </div>
                   )}
                 </div>
 
-                <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-3">
-                  <div className="text-[11px] text-slate-500">งบประมาณเฉลี่ยต่อโครงการ</div>
-                  <div className="text-base sm:text-lg font-bold font-mono text-slate-800 mt-0.5">
+                <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-3.5">
+                  <div className="text-[14px] sm:text-[15px] text-slate-600 font-semibold">งบประมาณเฉลี่ยต่อโครงการ</div>
+                  <div className="text-lg sm:text-xl font-bold font-mono text-slate-900 mt-1">
                     ฿{avgBudgetPerProject.toLocaleString()}
                   </div>
                 </div>
@@ -1096,42 +1135,42 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto border border-slate-200 rounded-lg mt-2">
-              <table className="table-fixed w-full text-left text-xs border-collapse">
+              <table className="table-fixed w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#0e533c] text-white font-semibold sticky top-0 z-10">
-                    <th className="py-2 px-2.5 w-12 text-center text-emerald-100 font-medium border-r border-[#0a4230]">ที่</th>
-                    <th className="py-2 px-2.5 w-20 text-center font-semibold border-r border-[#0a4230]">ประเภท</th>
-                    <th className="py-2 px-2.5 w-[16%] font-semibold">ประเด็นการพัฒนา</th>
-                    <th className="py-2 px-2.5 w-[14%] font-semibold">แผนงาน</th>
-                    <th className="py-2 px-2.5 w-[28%] font-semibold">ชื่อโครงการ / รายละเอียดเป้าหมาย</th>
-                    <th className="py-2 px-2.5 w-[12%] text-center font-semibold">หน่วยงาน</th>
-                    <th className="py-2 px-2.5 w-[12%] text-right font-semibold">งบประมาณ</th>
-                    <th className="py-2 px-2.5 w-20 text-center font-semibold">สถานะ</th>
+                  <tr className="bg-[#0e533c] text-white font-bold sticky top-0 z-10">
+                    <th className="py-3 px-3 w-14 text-center text-white font-bold border-r border-[#0a4230]">ที่</th>
+                    <th className="py-3 px-3 w-28 text-center font-bold border-r border-[#0a4230]">ประเภท</th>
+                    <th className="py-3 px-3 w-[16%] font-bold">ประเด็นการพัฒนา</th>
+                    <th className="py-3 px-3 w-[14%] font-bold">แผนงาน</th>
+                    <th className="py-3 px-3 w-[28%] font-bold">ชื่อโครงการ / รายละเอียดเป้าหมาย</th>
+                    <th className="py-3 px-3 w-[12%] text-center font-bold">หน่วยงาน</th>
+                    <th className="py-3 px-3 w-[12%] text-right font-bold">งบประมาณ</th>
+                    <th className="py-3 px-3 w-28 text-center font-bold">สถานะ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+                <tbody className="divide-y divide-slate-100 text-slate-800">
                   {sortedRecentProjects.map((p, idx) => (
                     <tr
                       key={p.id}
                       onClick={() => onViewProjectDetail(p)}
-                      className="hover:bg-emerald-50/40 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0"
+                      className="hover:bg-emerald-50/50 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0"
                     >
                       {/* 1. ที่ (ลำดับ 1, 2, 3...) */}
-                      <td className="py-2 px-2.5 w-12 text-center font-mono font-medium text-slate-500 whitespace-nowrap bg-slate-50/50 border-r border-slate-100">
+                      <td className="py-3 px-3 w-14 text-center font-mono font-bold text-slate-700 whitespace-nowrap bg-slate-50/60 border-r border-slate-100 text-base">
                         {idx + 1}
                       </td>
 
                       {/* 2. ประเภท */}
-                      <td className="py-2 px-2.5 w-20 text-center whitespace-nowrap border-r border-slate-100">
+                      <td className="py-3 px-3 w-28 text-center whitespace-nowrap border-r border-slate-100">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
+                          className={`inline-block px-2.5 py-1 rounded-md text-xs sm:text-[13px] font-bold ${
                             p.edition === 'first'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
                               : p.edition === 'additional'
-                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                              ? 'bg-sky-50 text-sky-800 border border-sky-300'
                               : p.edition === 'changed'
-                              ? 'bg-[#f5eeff] text-[#7e22ce] border border-[#d8b4fe]'
-                              : 'bg-[#fef9c3] text-[#a16207] border border-[#fde047]'
+                              ? 'bg-[#f5eeff] text-[#6b21a8] border border-[#d8b4fe]'
+                              : 'bg-[#fef9c3] text-[#854d0e] border border-[#fde047]'
                           }`}
                         >
                           {p.edition === 'first'
@@ -1145,53 +1184,76 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
                       </td>
 
                       {/* 3. ประเด็นการพัฒนา */}
-                      <td className="py-2 px-2.5 text-slate-600 truncate" title={p.planStrategy}>
+                      <td className="py-3 px-3 text-slate-700 text-base truncate" title={p.planStrategy}>
                         {p.planStrategy || '-'}
                       </td>
 
                       {/* 4. แผนงาน */}
-                      <td className="py-2 px-2.5 text-slate-600 truncate" title={p.planCategory}>
+                      <td className="py-3 px-3 text-slate-700 text-base truncate" title={p.planCategory}>
                         {p.planCategory || '-'}
                       </td>
 
                       {/* 5. ชื่อโครงการ / รายละเอียดเป้าหมาย */}
-                      <td className="py-2 px-2.5 font-medium text-slate-800">
-                        <div className="font-semibold text-slate-900 truncate" title={p.name}>{p.name}</div>
+                      <td className="py-3 px-3 font-medium text-slate-900">
+                        <div className="font-bold text-slate-950 text-base truncate" title={p.name}>{p.name}</div>
                         {p.target && (
-                          <div className="text-[11px] text-slate-500 font-normal truncate mt-0.5" title={`เป้าหมาย: ${p.target}`}>
+                          <div className="text-sm text-slate-600 font-normal truncate mt-0.5" title={`เป้าหมาย: ${p.target}`}>
                             เป้าหมาย: {p.target}
                           </div>
                         )}
                       </td>
 
                       {/* 6. หน่วยงานรับผิดชอบ */}
-                      <td className="py-2 px-2.5 text-center text-slate-700 truncate" title={p.department}>
+                      <td className="py-3 px-3 text-center text-slate-700 text-base truncate" title={p.department}>
                         {p.department || '-'}
                       </td>
 
                       {/* 7. งบประมาณ */}
-                      <td className="py-2 px-2.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                      <td className="py-3 px-3 text-right font-mono font-bold text-emerald-800 text-base whitespace-nowrap">
                         ฿{getProjectBudget(p, appliedFilters.year).toLocaleString()}
                       </td>
 
-                      {/* 8. สถานะ */}
-                      <td className="py-2 px-2.5 w-20 text-center whitespace-nowrap">
-                        {p.executionStatus === 'completed' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0]">
-                            <Check className="w-2.5 h-2.5" />
-                            <span>เสร็จสิ้น</span>
-                          </span>
-                        ) : p.executionStatus === 'in_progress' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#fffbeb] text-[#d97706] border border-[#fde68a]">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span>กำลังทำ</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#fff1f2] text-[#e11d48] border border-[#fecdd3]">
-                            <span className="inline-block w-2 h-2 rounded-full border-2 border-dotted border-[#e11d48]" />
-                            <span>ไม่ทำ</span>
-                          </span>
-                        )}
+                      {/* 8. สถานะ (แยก Action & Event Handler เปิด Modal สถานะและประวัติการเสนอเรื่องโครงการ) */}
+                      <td
+                        className="py-3 px-3 w-28 text-center whitespace-nowrap"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedStatusProject(p);
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStatusProject(p);
+                          }}
+                          title="คลิกเพื่อดูสถานะและประวัติการเสนอเรื่องโครงการ (Project Approval & Tracking Status)"
+                          className="group/btn inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-[13px] font-bold cursor-pointer transition-all duration-150 hover:scale-105 active:scale-95 shadow-xs"
+                        >
+                          {p.isBudgetAllocated ? (
+                            p.executionStatus === 'completed' ? (
+                              <span className="inline-flex items-center gap-1 bg-[#ecfdf5] text-[#047857] border border-[#a7f3d0] px-2.5 py-1 rounded-full font-bold">
+                                <Check className="w-3.5 h-3.5" />
+                                <span>เสร็จสิ้น</span>
+                              </span>
+                            ) : p.executionStatus === 'cancelled' ? (
+                              <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full font-bold">
+                                <span className="inline-block w-2 h-2 rounded-full bg-rose-600" />
+                                <span>โอนลด</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 border border-sky-200 px-2.5 py-1 rounded-full font-bold">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>กำลังทำ</span>
+                              </span>
+                            )
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-full font-bold">
+                              <span className="inline-block w-2 h-2 rounded-full bg-amber-600" />
+                              <span>ในแผน</span>
+                            </span>
+                          )}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1241,11 +1303,6 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono text-slate-400">#{idx + 1}</span>
-                      {p.code && (
-                        <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[10px] px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
-                          {p.code}
-                        </span>
-                      )}
                       <h4 className="font-semibold text-slate-900 text-xs truncate">{p.name}</h4>
                     </div>
                     <div className="text-[11px] text-slate-500 mt-0.5">
@@ -1262,13 +1319,19 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
                     <div className="font-mono font-bold text-emerald-800 text-xs">
                       ฿{getProjectBudget(p, appliedFilters.year).toLocaleString()}
                     </div>
-                    <span
-                      className={`inline-block mt-0.5 px-1.5 py-0.2 rounded text-[10px] ${
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedStatusProject(p);
+                      }}
+                      title="คลิกเพื่อดูสถานะและประวัติการเสนอเรื่องโครงการ (Project Approval & Tracking Status)"
+                      className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-medium transition-all duration-150 cursor-pointer hover:scale-105 active:scale-95 shadow-xs ${
                         p.executionStatus === 'completed'
-                          ? 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
                           : p.executionStatus === 'in_progress'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-rose-100 text-rose-800'
+                          ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                          : 'bg-rose-100 text-rose-800 hover:bg-rose-200'
                       }`}
                     >
                       {p.executionStatus === 'completed'
@@ -1276,7 +1339,7 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
                         : p.executionStatus === 'in_progress'
                         ? 'กำลังทำ'
                         : 'รอจัดสรร'}
-                    </span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1294,6 +1357,16 @@ export const DashboardOverviewView: React.FC<DashboardOverviewViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Pop-up สถานะและประวัติการเสนอเรื่องโครงการ (Project Approval & Tracking Status) */}
+      <ProjectStatusWorkflowModal
+        project={selectedStatusProject}
+        isOpen={Boolean(selectedStatusProject)}
+        onClose={() => setSelectedStatusProject(null)}
+        currentUser={currentUser}
+        onViewProjectDetail={onViewProjectDetail}
+        onNavigateToMenu={onNavigateToMenu}
+      />
     </div>
   );
 };

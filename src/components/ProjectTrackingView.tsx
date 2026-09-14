@@ -345,21 +345,21 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50 h-full min-h-0 overflow-hidden">
+    <div className="flex-1 flex flex-col bg-slate-50 h-full min-h-0 overflow-hidden print:bg-white print:overflow-visible">
       {/* Top Banner Header */}
-      <header className="bg-[#055740] text-white px-4 py-2 sm:px-6 shadow-xs flex items-center justify-between shrink-0">
+      <header className="bg-[#005242] text-white px-4 py-2.5 sm:px-6 shadow-xs flex items-center justify-between shrink-0 no-print print:hidden">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-[#086d50] flex items-center justify-center shrink-0">
-            <Activity className="w-4 h-4 text-emerald-100" />
+          <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0 shadow-xs">
+            <Activity className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-xs sm:text-sm font-bold tracking-tight">
+          <h1 className="text-sm sm:text-base font-bold tracking-tight">
             <span className="text-white">ระบบติดตามโครงการ</span>
-            <span className="mx-2 text-emerald-300/60 font-normal">|</span>
-            <span className="font-normal text-emerald-100 text-xs">
+            <span className="mx-2.5 text-emerald-300/60 font-normal">|</span>
+            <span className="font-medium text-emerald-100 text-sm">
               ระบบแผนพัฒนาเทศบาลเมืองศิลา
             </span>
-            <span className="mx-2 text-emerald-300/60 font-normal">|</span>
-            <span className="font-normal text-emerald-100 text-xs">
+            <span className="mx-2.5 text-emerald-300/60 font-normal">|</span>
+            <span className="font-medium text-emerald-100 text-sm">
               เทศบาลเมืองศิลา จ.ขอนแก่น
             </span>
           </h1>
@@ -367,18 +367,28 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 print:p-0 print:overflow-visible">
+        {/* Standardized 2-Line Official Header */}
+        <div className="text-center py-3 sm:py-4 border-b border-slate-200 print:border-none bg-white rounded-2xl shadow-2xs print:shadow-none p-5">
+          <h2 className="text-lg sm:text-xl font-extrabold text-slate-950 print:text-black leading-snug">
+            รายงานสรุปผลการดำเนินงานโครงการตามแผนพัฒนาท้องถิ่น ประจำปีงบประมาณ พ.ศ. {selectedYear === 'all' ? '2571-2575 (ทุกปีงบประมาณ)' : selectedYear}
+          </h2>
+          <p className="text-sm sm:text-base font-bold text-slate-800 print:text-black leading-tight mt-1.5">
+            เทศบาลเมืองศิลา อำเภอเมืองขอนแก่น จังหวัดขอนแก่น
+          </p>
+        </div>
+
         {/* Filters Box */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4 no-print print:hidden">
           {/* Year selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700">ปีงบประมาณ:</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold text-slate-800">ปีงบประมาณ:</span>
             <div className="relative">
               <select
                 id="filter-tracking-year"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                className="appearance-none pl-4 pr-9 py-2 text-sm font-bold bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer min-h-[42px]"
               >
                 <option value="2571">พ.ศ. 2571</option>
                 <option value="2572">พ.ศ. 2572</option>
@@ -387,15 +397,15 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 <option value="2575">พ.ศ. 2575</option>
                 <option value="all">ทุกปีงบประมาณ</option>
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-4 h-4 text-slate-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
           {/* 4 Form Filter Inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             {/* 1. ประเด็นการพัฒนา */}
             <div>
-              <label className="block text-[11px] font-medium text-slate-600 mb-1">
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">
                 ประเด็นการพัฒนา
               </label>
               <div className="relative">
@@ -404,7 +414,7 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                   value={selectedStrategy}
                   onChange={(e) => setSelectedStrategy(e.target.value)}
                   title={selectedStrategy || '-- ทุกประเด็นการพัฒนา --'}
-                  className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer truncate"
+                  className="w-full appearance-none pl-3.5 pr-9 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer truncate min-h-[42px]"
                 >
                   <option value="">-- ทุกประเด็นการพัฒนา --</option>
                   {strategies.map((strat) => (
@@ -413,13 +423,13 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* 2. ผู้รับผิดชอบ */}
             <div>
-              <label className="block text-[11px] font-medium text-slate-600 mb-1">
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">
                 ผู้รับผิดชอบ
               </label>
               <div className="relative">
@@ -428,7 +438,7 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                   value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value)}
                   title={selectedDepartment || '-- ทุกหน่วยงาน --'}
-                  className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer truncate"
+                  className="w-full appearance-none pl-3.5 pr-9 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer truncate min-h-[42px]"
                 >
                   <option value="">-- ทุกหน่วยงาน --</option>
                   {departments.map((dept) => (
@@ -437,31 +447,31 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
             {/* 3. ค้นหาชื่อโครงการ */}
             <div>
-              <label className="block text-[11px] font-medium text-slate-600 mb-1">
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">
                 ค้นหาชื่อโครงการ
               </label>
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   id="filter-search-name"
                   type="text"
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="ค้นหารหัส ID (เช่น ป.1-โยธา-001), ชื่อโครงการ..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  placeholder="ค้นหาชื่อโครงการ..."
+                  className="w-full pl-10 pr-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[42px]"
                 />
               </div>
             </div>
 
             {/* 4. งบประมาณ (บาท) */}
             <div>
-              <label className="block text-[11px] font-medium text-slate-600 mb-1">
+              <label className="block text-sm font-bold text-slate-700 mb-1.5">
                 งบประมาณ (บาท)
               </label>
               <input
@@ -470,21 +480,21 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 value={budgetFilter}
                 onChange={(e) => setBudgetFilter(e.target.value)}
                 placeholder="ระบุจำนวนเงิน..."
-                className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
+                className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono min-h-[42px]"
               />
             </div>
           </div>
 
           {/* Action buttons row */}
-          <div className="pt-2 flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-t border-slate-100">
+          <div className="pt-2 flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-t border-slate-200">
             {/* Left buttons */}
-            <div className="flex items-center flex-wrap gap-2">
+            <div className="flex items-center flex-wrap gap-2.5">
               <button
                 id="btn-tracking-search"
                 type="button"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#059669] hover:bg-[#047857] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#005242] hover:bg-[#003d31] text-white text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer min-h-[42px]"
               >
-                <Search className="w-3.5 h-3.5" />
+                <Search className="w-4 h-4" />
                 <span>ค้นหา</span>
               </button>
 
@@ -492,9 +502,9 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 id="btn-tracking-show-all"
                 type="button"
                 onClick={handleShowAll}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold rounded-xl transition-colors cursor-pointer min-h-[42px]"
               >
-                <FolderOpen className="w-3.5 h-3.5 text-slate-500" />
+                <FolderOpen className="w-4 h-4 text-slate-600" />
                 <span>แสดงทั้งหมด</span>
               </button>
 
@@ -502,46 +512,46 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 id="btn-tracking-reset"
                 type="button"
                 onClick={handleResetFilters}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold rounded-xl transition-colors cursor-pointer min-h-[42px]"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-amber-500" />
+                <RotateCcw className="w-4 h-4 text-amber-600" />
                 <span>เริ่มใหม่</span>
               </button>
 
-              <div className="flex items-center gap-1.5 text-xs text-slate-700 ml-1">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-800 ml-1">
                 <span>รายการโครงการ ({filteredItems.length} รายการ)</span>
-                <span className="px-2 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-600 rounded-md border border-slate-200">
+                <span className="px-2.5 py-1 text-xs font-bold bg-slate-100 text-slate-700 rounded-lg border border-slate-300">
                   ผลการกรอง
                 </span>
               </div>
             </div>
 
             {/* Right buttons */}
-            <div className="flex items-center flex-wrap gap-2">
+            <div className="flex items-center flex-wrap gap-2.5">
               {/* Export dropdown */}
               <div className="relative">
                 <button
                   id="btn-tracking-export"
                   type="button"
                   onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#055740] hover:bg-[#044835] text-white text-xs font-medium rounded-lg shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#005242] hover:bg-[#003d31] text-white text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer min-h-[42px]"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-4 h-4" />
                   <span>ส่งออกข้อมูล</span>
-                  <span className="bg-[#086d50] text-emerald-100 text-[10px] px-1.5 py-0.2 rounded font-mono">
+                  <span className="bg-[#003d31] text-emerald-100 text-xs px-2 py-0.5 rounded font-mono font-bold">
                     {filteredItems.length}
                   </span>
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="w-3.5 h-3.5" />
                 </button>
 
                 {isExportDropdownOpen && (
-                  <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-30 animate-in fade-in duration-100">
+                  <div className="absolute right-0 mt-1.5 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-30 animate-in fade-in duration-100">
                     <button
                       type="button"
                       onClick={handleExportCSV}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3.5 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                      <FileText className="w-4 h-4 text-emerald-700" />
                       <span>ส่งออก Excel / CSV</span>
                     </button>
                     <button
@@ -550,9 +560,9 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                         window.print();
                         setIsExportDropdownOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full text-left px-3.5 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <Printer className="w-3.5 h-3.5 text-blue-600" />
+                      <Printer className="w-4 h-4 text-blue-700" />
                       <span>พิมพ์รายงาน PDF</span>
                     </button>
                   </div>
@@ -564,9 +574,9 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 id="btn-tracking-pull-approved"
                 type="button"
                 onClick={() => setIsPullModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ecfdf5] border border-[#a7f3d0] hover:bg-[#d1fae5] text-[#065f46] text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-950 text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer min-h-[42px]"
               >
-                <Share2 className="w-3.5 h-3.5 text-[#059669]" />
+                <Share2 className="w-4 h-4 text-emerald-700" />
                 <span>ดึงจากโครงการที่อนุมัติงบ ({allProjects.length})</span>
               </button>
 
@@ -575,9 +585,9 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 id="btn-tracking-add"
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#059669] hover:bg-[#047857] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#005242] hover:bg-[#003d31] text-white text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer min-h-[42px]"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
                 <span>เพิ่มรายการติดตาม</span>
               </button>
 
@@ -586,36 +596,36 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 id="btn-tracking-print"
                 type="button"
                 onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-sm font-bold rounded-xl transition-colors cursor-pointer min-h-[42px]"
               >
-                <Printer className="w-3.5 h-3.5 text-slate-500" />
+                <Printer className="w-4 h-4 text-slate-600" />
                 <span>พิมพ์รายงาน</span>
               </button>
 
               {/* View Toggle */}
-              <div className="inline-flex items-center rounded-lg border border-slate-200 p-0.5 bg-white">
+              <div className="inline-flex items-center rounded-xl border border-slate-300 p-0.5 bg-white min-h-[42px]">
                 <button
                   type="button"
                   onClick={() => setViewMode('table')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-lg transition-colors cursor-pointer ${
                     viewMode === 'table'
-                      ? 'border border-emerald-500 bg-emerald-50/50 text-emerald-700'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'border border-emerald-500 bg-emerald-50 text-emerald-900'
+                      : 'text-slate-700 hover:text-slate-950'
                   }`}
                 >
-                  <FileText className="w-3.5 h-3.5" />
+                  <FileText className="w-4 h-4" />
                   <span>ตาราง</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('cards')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-lg transition-colors cursor-pointer ${
                     viewMode === 'cards'
-                      ? 'border border-emerald-500 bg-emerald-50/50 text-emerald-700'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'border border-emerald-500 bg-emerald-50 text-emerald-900'
+                      : 'text-slate-700 hover:text-slate-950'
                   }`}
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <LayoutGrid className="w-4 h-4" />
                   <span>การ์ด</span>
                 </button>
               </div>
@@ -624,33 +634,33 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
         </div>
 
         {/* 6 KPI Metric Cards Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
           {/* Card 1: โครงการที่ติดตามทั้งหมด */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-              <span>โครงการที่ติดตามทั้งหมด</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-sm text-slate-700 font-bold">
+              <span>โครงการทั้งหมด</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
             </div>
-            <div className="flex items-baseline justify-between mt-2">
-              <span className="text-2xl font-bold font-mono text-slate-900">
+            <div className="flex items-baseline justify-between mt-2.5">
+              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-950">
                 {totalTracked}
               </span>
-              <span className="text-xs text-slate-400">รายการ</span>
+              <span className="text-sm font-bold text-slate-500">รายการ</span>
             </div>
           </div>
 
           {/* Card 2: ความคืบหน้าเฉลี่ยรวม */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="text-xs text-slate-600 font-medium">
-              ความคืบหน้าเฉลี่ยรวม
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            <div className="text-sm text-slate-700 font-bold">
+              ความคืบหน้าเฉลี่ย
             </div>
-            <div className="mt-2">
-              <div className="text-2xl font-bold font-mono text-[#059669]">
+            <div className="mt-2.5">
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-800">
                 {avgProgress}%
               </div>
-              <div className="w-full bg-[#d1fae5] h-1.5 rounded-full mt-1.5 overflow-hidden">
+              <div className="w-full bg-emerald-100 h-2 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="bg-[#059669] h-full rounded-full transition-all duration-300"
+                  className="bg-emerald-600 h-full rounded-full transition-all duration-300"
                   style={{ width: `${avgProgress}%` }}
                 ></div>
               </div>
@@ -658,64 +668,64 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
           </div>
 
           {/* Card 3: ดำเนินการแล้วเสร็จ */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-              <span>ดำเนินการแล้วเสร็จ</span>
-              <CheckCircle2 className="w-4 h-4 text-[#16a34a]" />
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-sm text-slate-700 font-bold">
+              <span>แล้วเสร็จ</span>
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
-            <div className="flex items-baseline justify-between mt-2">
-              <span className="text-2xl font-bold font-mono text-slate-900">
+            <div className="flex items-baseline justify-between mt-2.5">
+              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-950">
                 {countCompleted}
               </span>
-              <span className="text-xs font-semibold text-[#16a34a] font-mono">
+              <span className="text-sm font-bold text-emerald-700 font-mono">
                 {pctCompleted}%
               </span>
             </div>
           </div>
 
           {/* Card 4: อยู่ระหว่างดำเนินการ */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-              <span>อยู่ระหว่างดำเนินการ</span>
-              <Clock className="w-4 h-4 text-[#2563eb]" />
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-sm text-slate-700 font-bold">
+              <span>กำลังดำเนินการ</span>
+              <Clock className="w-5 h-5 text-blue-600" />
             </div>
-            <div className="flex items-baseline justify-between mt-2">
-              <span className="text-2xl font-bold font-mono text-slate-900">
+            <div className="flex items-baseline justify-between mt-2.5">
+              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-950">
                 {countInProgress}
               </span>
-              <span className="text-xs font-semibold text-[#2563eb] font-mono">
+              <span className="text-sm font-bold text-blue-700 font-mono">
                 {pctInProgress}%
               </span>
             </div>
           </div>
 
           {/* Card 5: ล่าช้ากว่าแผน */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-sm text-slate-700 font-bold">
               <span>ล่าช้ากว่าแผน</span>
-              <AlertTriangle className="w-4 h-4 text-[#d97706]" />
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
             </div>
-            <div className="flex items-baseline justify-between mt-2">
-              <span className="text-2xl font-bold font-mono text-slate-900">
+            <div className="flex items-baseline justify-between mt-2.5">
+              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-950">
                 {countDelayed}
               </span>
-              <span className="text-xs font-semibold text-[#d97706] font-mono">
+              <span className="text-sm font-bold text-amber-700 font-mono">
                 {pctDelayed}%
               </span>
             </div>
           </div>
 
           {/* Card 6: ยังไม่เริ่มดำเนินการ */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
-              <span>ยังไม่เริ่มดำเนินการ</span>
-              <Circle className="w-3.5 h-3.5 text-slate-400 fill-slate-400" />
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-sm text-slate-700 font-bold">
+              <span>ยังไม่เริ่ม</span>
+              <Circle className="w-5 h-5 text-slate-400" />
             </div>
-            <div className="flex items-baseline justify-between mt-2">
-              <span className="text-2xl font-bold font-mono text-slate-900">
+            <div className="flex items-baseline justify-between mt-2.5">
+              <span className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-950">
                 {countNotStarted}
               </span>
-              <span className="text-xs font-semibold text-slate-500 font-mono">
+              <span className="text-sm font-bold text-slate-600 font-mono">
                 {pctNotStarted}%
               </span>
             </div>
@@ -729,7 +739,6 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#054e3b] text-white text-xs font-semibold sticky top-0 z-10">
-                    <th className="py-3 px-3 text-center w-28 font-medium">ID</th>
                     <th className="py-3 px-3 text-center w-24">จัดการ</th>
                     <th className="py-3 px-4 min-w-[260px]">โครงการ</th>
                     <th className="py-3 px-4 min-w-[180px]">วัตถุประสงค์</th>
@@ -751,7 +760,7 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className="py-8 text-center text-slate-400">
+                      <td colSpan={14} className="py-8 text-center text-slate-400">
                         ไม่พบรายการโครงการที่ติดตามตามเงื่อนไขที่เลือก
                       </td>
                     </tr>
@@ -766,11 +775,6 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
 
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                          {/* ID */}
-                          <td className="py-3.5 px-3 text-center w-28 font-mono text-emerald-800 font-medium whitespace-nowrap bg-emerald-50/20">
-                            {getProjectDisplayId(item, item.orderNumber || idx + 1)}
-                          </td>
-
                           {/* จัดการ (Eye, Edit, Trash) */}
                           <td className="py-3.5 px-3 text-center">
                             <div className="flex items-center justify-center gap-1.5">
@@ -810,11 +814,6 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                           {/* โครงการ */}
                           <td className="py-3.5 px-4">
                             <div className="font-bold text-slate-900 leading-snug flex items-center gap-1.5 flex-wrap">
-                              {item.code && (
-                                <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[11px] px-1.5 py-0.5 rounded border border-emerald-200/80">
-                                  {item.code}
-                                </span>
-                              )}
                               <span>{item.name}</span>
                             </div>
                             <div className="text-[11px] text-emerald-700 mt-1 font-normal line-clamp-1">
@@ -992,11 +991,6 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                     <span className="text-[11px] font-mono font-semibold text-slate-400 mr-2">
                       #{idx + 1}
                     </span>
-                    {item.code && (
-                      <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[10px] px-1.5 py-0.5 rounded border border-emerald-200/80 mr-1.5 inline-block">
-                        {item.code}
-                      </span>
-                    )}
                     <span className="text-xs font-bold text-slate-900">{item.name}</span>
                     <div className="text-[11px] text-emerald-700 mt-0.5">
                       {item.planStrategy}
@@ -1155,11 +1149,6 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
-                          {p.code && (
-                            <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[10px] px-1.5 py-0.5 rounded border border-emerald-200/80">
-                              {p.code}
-                            </span>
-                          )}
                           <span>{p.name}</span>
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
@@ -1710,8 +1699,7 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                   ไม่พบโครงการที่ค้นหา
                 </div>
               ) : (
-                paginatedPickerProjects.map((p, idx) => {
-                  const displayId = getProjectDisplayId(p, p.orderNumber || idx + 1);
+                paginatedPickerProjects.map((p) => {
                   const budgetAmount = p.budgetApproved > 0 ? p.budgetApproved : p.budgetPlan;
 
                   return (
@@ -1740,12 +1728,9 @@ export const ProjectTrackingView: React.FC<ProjectTrackingViewProps> = ({
                       }}
                       className="p-2.5 my-1.5 rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/40 cursor-pointer transition-all flex items-center justify-between gap-3 text-xs bg-white shadow-2xs"
                     >
-                      {/* ซ้าย: Badge รหัส ID + ชื่อโครงการ + กองผู้รับผิดชอบ + งบประมาณ */}
+                      {/* ซ้าย: ชื่อโครงการ + กองผู้รับผิดชอบ + งบประมาณ */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="font-mono text-emerald-800 font-bold bg-emerald-50 text-[10px] px-1.5 py-0.5 rounded border border-emerald-200/80 shrink-0">
-                            {p.code || displayId}
-                          </span>
                           <span className="font-bold text-slate-900 truncate text-xs" title={p.name}>
                             {p.name}
                           </span>
