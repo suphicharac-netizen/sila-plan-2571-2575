@@ -386,7 +386,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={onOpenVisitorAnalytics}
             className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-[15px] text-sky-300 bg-[#042823] hover:bg-[#073931] border border-[#0a4e40] transition-colors cursor-pointer font-bold"
           >
-            <BarChart3 className="w-4 h-4 text-sky-400" />
+            <BarChart3 className="w-4 h-4 text-white" />
             <span>สถิติผู้เข้าชมระบบ (Analytics)</span>
           </button>
         )}
@@ -405,7 +405,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           id="btn-db-backup"
           onClick={onOpenStorageModal}
-          className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-[15px] text-slate-300 bg-[#04241c] hover:bg-[#073227] border border-[#0c4e3b] transition-colors cursor-pointer font-bold"
+          className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-[15px] text-white bg-[#04241c] hover:bg-[#073227] border border-[#0c4e3b] transition-colors cursor-pointer font-bold"
         >
           <Database className="w-4 h-4 text-emerald-400" />
           <span>สำรอง / จัดการข้อมูล</span>
