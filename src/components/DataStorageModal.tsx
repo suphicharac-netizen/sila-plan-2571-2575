@@ -22,7 +22,7 @@ export const DataStorageModal: React.FC<DataStorageModalProps> = ({
   if (!isOpen) return null;
 
   const handleReset = () => {
-    if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นชุดตั้งต้นตามแผนปี 2571 (9 โครงการ ฿7,200,000) หรือไม่?')) {
+    if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นชุดตั้งต้นตามแผนปี 2571 (9 โครงการ 7,200,000 บาท) หรือไม่?')) {
       const initial = storageService.resetToInitial();
       onDataUpdated(initial);
       setStatusMessage('รีเซ็ตข้อมูลตั้งต้นสำเร็จเรียบร้อยแล้ว');
@@ -76,10 +76,13 @@ export const DataStorageModal: React.FC<DataStorageModalProps> = ({
             <h3 className="text-base font-bold">สำรองและจัดการฐานข้อมูล (IndexedDB / LocalStorage)</h3>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-emerald-100 hover:text-white p-1 rounded-md transition-colors cursor-pointer"
+            className="w-8 h-8 sm:w-9 sm:h-9 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg shadow-xs flex items-center justify-center cursor-pointer transition-colors p-0"
+            title="ปิดหน้าต่าง"
+            aria-label="ปิดหน้าต่าง"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 stroke-[2.2]" />
           </button>
         </div>
 
@@ -115,7 +118,7 @@ export const DataStorageModal: React.FC<DataStorageModalProps> = ({
                   ซิงค์ข้อมูลตั้งต้น (Force Sync Initial Data)
                 </div>
                 <div className="text-amber-700 text-[11px] mt-0.5">
-                  หากข้อมูลบน GitHub Pages ไม่ตรงกับระบบ ให้กดปุ่มนี้เพื่อโหลดข้อมูลตั้งต้นล่าสุด 9 โครงการ (งบ ฿7,200,000)
+                  หากข้อมูลบน GitHub Pages ไม่ตรงกับระบบ ให้กดปุ่มนี้เพื่อโหลดข้อมูลตั้งต้นล่าสุด 9 โครงการ (งบ 7,200,000 บาท)
                 </div>
                 <button
                   id="btn-force-reset-data"

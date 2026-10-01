@@ -106,6 +106,16 @@ export const canUserUpdateExecutionStatus = (
 export const getProjectVillageInfo = (p: Partial<ProjectData>): VillageInfo | null => {
   if (!p) return null;
 
+  // Non-village areas (Municipal facilities or broad/outside areas) do not have VillageInfo
+  if (
+    p.villageNumber === 0 ||
+    p.zone === 'อาคาร/หน่วยงานในสังกัด' ||
+    p.zone === 'พื้นที่ภาพรวม / นอกเขต' ||
+    p.zone === 'ภาพรวม/นอกเขต'
+  ) {
+    return null;
+  }
+
   // Priority 1: Match by villageNumber (numeric or numeric string 1-28)
   if (p.villageNumber !== undefined && p.villageNumber !== null) {
     const num = typeof p.villageNumber === 'number' ? p.villageNumber : parseInt(String(p.villageNumber), 10);
@@ -116,6 +126,18 @@ export const getProjectVillageInfo = (p: Partial<ProjectData>): VillageInfo | nu
   }
 
   const combinedText = `${p.village || ''} ${p.name || ''}`;
+
+  // If text refers to municipal facilities or broad areas without village number, return null
+  if (
+    p.village &&
+    (p.village.includes('สำนักงานเทศบาล') ||
+      p.village.includes('ศูนย์พัฒนาเด็กเล็กเทศบาล') ||
+      p.village.includes('โรงเรียนสาธิตเทศบาล') ||
+      p.village.includes('ทุกหมู่บ้าน') ||
+      p.village.includes('นอกเขต'))
+  ) {
+    return null;
+  }
 
   // Priority 2: Extract village number from village or name string, e.g. "หมู่ที่ 12", "หมู่ 12", "ม.12"
   const matchNum = combinedText.match(/หมู่ที่\s*(\d+)|หมู่\s*(\d+)|ม\.(\d+)/);
@@ -190,7 +212,7 @@ export const getProjectVillageInfo = (p: Partial<ProjectData>): VillageInfo | nu
     if (z && z.villages.length > 0) return z.villages[0];
   }
 
-  return ALL_VILLAGES[0] || null;
+  return null;
 };
 
 /**

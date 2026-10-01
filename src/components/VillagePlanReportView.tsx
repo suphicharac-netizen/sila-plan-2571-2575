@@ -29,6 +29,7 @@ import {
   updateProjectExecutionStatus
 } from '../utils/villageUtils';
 import { matchesProjectSearch } from '../utils/projectCode';
+import { exportTableToExcel } from '../utils/exportUtils';
 
 interface VillagePlanReportViewProps {
   projects: ProjectData[];
@@ -261,7 +262,7 @@ export const VillagePlanReportView: React.FC<VillagePlanReportViewProps> = ({
         <title>แบบ ผ.02 รายงานแผนพัฒนารายหมู่บ้าน</title>
         <style>
           @page { size: landscape; margin: 1cm; }
-          body { font-family: 'TH Sarabun PSK', 'TH Sarabun New', 'Angsana New', sans-serif; font-size: 14pt; }
+          body { font-family: 'Prompt', 'TH Sarabun PSK', 'TH Sarabun New', 'Angsana New', sans-serif; font-size: 14pt; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
           th, td { border: 1px solid #000; padding: 6px; font-size: 11pt; vertical-align: top; }
           th { background-color: #f2f2f2; text-align: center; font-weight: bold; }

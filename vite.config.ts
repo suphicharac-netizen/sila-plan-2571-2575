@@ -6,10 +6,12 @@ export default defineConfig({
   base: '/sila-plan-2571-2575/', plugins: [react(), tailwindcss()],
   server: {
     port: 3000,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    allowedHosts: true
   },
   preview: {
     port: 3000,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    allowedHosts: true
   }
 });

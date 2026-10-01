@@ -1,53 +1,292 @@
 import React, { useState, useMemo } from 'react';
 import {
-  MapPin,
-  ChevronRight,
-  ArrowLeft,
-  Building2,
-  Layers,
+  Home,
+  FileText,
+  AlertTriangle,
   Search,
+  RotateCcw,
+  Eye,
+  MoreVertical,
+  Plus,
+  Download,
+  BookOpen,
+  FileSpreadsheet,
   CheckCircle2,
   Clock,
-  Coins,
-  FileText,
-  Filter,
-  Check,
-  Eye,
-  BarChart3,
-  Home,
-  Sparkles,
-  RotateCcw,
+  X,
+  MapPin,
+  ChevronLeft,
+  ChevronRight,
   Printer,
-  FileSpreadsheet,
-  AlertCircle,
-  Activity,
-  FolderOpen,
-  Download,
-  Plus
+  Building2,
+  Users,
+  Layers,
+  ArrowRight,
+  Check
 } from 'lucide-react';
-import {
-  ProjectData,
-  SILA_ZONES,
-  ALL_VILLAGES,
-  ZoneInfo,
-  VillageInfo,
-  UserAccount,
-  ProjectExecutionStatus
-} from '../types';
-import { DEVELOPMENT_STRATEGIES, DEPARTMENTS } from '../utils/constants';
-import { matchesProjectSearch } from '../utils/projectCode';
-import {
-  getProjectVillageInfo,
-  isProjectInVillage,
-  isProjectInZone,
-  normalizeProjectVillageData,
-  isProjectBudgetAllocated,
-  toggleProjectBudgetAllocation,
-  EXECUTION_STATUS_CONFIG,
-  getExecutionStatus,
-  canUserUpdateExecutionStatus,
-  updateProjectExecutionStatus
-} from '../utils/villageUtils';
+import { ProjectData, UserAccount } from '../types';
+import { getProjectDisplayId } from '../utils/projectCode';
+
+export interface VillagePlanItem {
+  id: string;
+  orderNumber: number;
+  code: string; // e.g. "01", "02"
+  villageName: string; // e.g. "บ้านหนองบัว"
+  subdistrict: string; // ตำบล เช่น "ตำบลหนองบัว"
+  district: string; // อำเภอ เช่น "อำเภอเมือง"
+  status: 'has_plan' | 'in_progress' | 'no_plan'; // มีแผนแล้ว | อยู่ระหว่างจัดทำ | ยังไม่จัดทำ
+  planYears: string; // e.g. "2567 - 2571" หรือ "-"
+  population?: number;
+  households?: number;
+  headmanName?: string;
+  contactPhone?: string;
+  zone?: string;
+  coordinates?: { x: number; y: number }; // For map placement (percentage 0-100)
+}
+
+// Initial 15 Village dataset strictly matching image.png
+const INITIAL_VILLAGE_PLANS: VillagePlanItem[] = [
+  {
+    id: 'v-01',
+    orderNumber: 1,
+    code: '01',
+    villageName: 'บ้านหนองบัว',
+    subdistrict: 'ตำบลหนองบัว',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 1420,
+    households: 360,
+    headmanName: 'นายประสิทธิ์ สุขเกษม',
+    contactPhone: '081-234-5678',
+    zone: 'เขต 1',
+    coordinates: { x: 38, y: 55 }
+  },
+  {
+    id: 'v-02',
+    orderNumber: 2,
+    code: '02',
+    villageName: 'บ้านศรีสุข',
+    subdistrict: 'ตำบลหนองบัว',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 980,
+    households: 245,
+    headmanName: 'นายสมพร กิตติคุณ',
+    contactPhone: '082-345-6789',
+    zone: 'เขต 1',
+    coordinates: { x: 44, y: 48 }
+  },
+  {
+    id: 'v-03',
+    orderNumber: 3,
+    code: '03',
+    villageName: 'บ้านทุ่งสว่าง',
+    subdistrict: 'ตำบลทุ่งสว่าง',
+    district: 'อำเภอเมือง',
+    status: 'in_progress',
+    planYears: '2567 - 2571',
+    population: 1150,
+    households: 290,
+    headmanName: 'นายบุญเลิศ รัตนชัย',
+    contactPhone: '083-456-7890',
+    zone: 'เขต 2',
+    coordinates: { x: 72, y: 42 }
+  },
+  {
+    id: 'v-04',
+    orderNumber: 4,
+    code: '04',
+    villageName: 'บ้านโคกสูง',
+    subdistrict: 'ตำบลหนองบัว',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 860,
+    households: 215,
+    headmanName: 'นางสาวพิมพ์ใจ มีสุข',
+    contactPhone: '084-567-8901',
+    zone: 'เขต 1',
+    coordinates: { x: 32, y: 38 }
+  },
+  {
+    id: 'v-05',
+    orderNumber: 5,
+    code: '05',
+    villageName: 'บ้านคลองใหม่',
+    subdistrict: 'ตำบลคลองใหม่',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 1320,
+    households: 330,
+    headmanName: 'นายอำนวย พงษ์ศิริ',
+    contactPhone: '085-678-9012',
+    zone: 'เขต 2',
+    coordinates: { x: 62, y: 64 }
+  },
+  {
+    id: 'v-06',
+    orderNumber: 6,
+    code: '06',
+    villageName: 'บ้านเขาพระ',
+    subdistrict: 'ตำบลเขาพระ',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 1540,
+    households: 385,
+    headmanName: 'นายธีระศักดิ์ วงศ์มณี',
+    contactPhone: '086-789-0123',
+    zone: 'เขต 3',
+    coordinates: { x: 48, y: 22 }
+  },
+  {
+    id: 'v-07',
+    orderNumber: 7,
+    code: '07',
+    villageName: 'บ้านดอนมะขาม',
+    subdistrict: 'ตำบลดอนมะขาม',
+    district: 'อำเภอเมือง',
+    status: 'in_progress',
+    planYears: '2567 - 2571',
+    population: 780,
+    households: 195,
+    headmanName: 'นายสมบัติ ใจภักดี',
+    contactPhone: '087-890-1234',
+    zone: 'เขต 2',
+    coordinates: { x: 26, y: 68 }
+  },
+  {
+    id: 'v-08',
+    orderNumber: 8,
+    code: '08',
+    villageName: 'บ้านป่าคา',
+    subdistrict: 'ตำบลป่าคา',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 940,
+    households: 235,
+    headmanName: 'นายวันชัย เลิศวิไล',
+    contactPhone: '088-901-2345',
+    zone: 'เขต 3',
+    coordinates: { x: 78, y: 28 }
+  },
+  {
+    id: 'v-09',
+    orderNumber: 9,
+    code: '09',
+    villageName: 'บ้านใหม่พัฒนา',
+    subdistrict: 'ตำบลใหม่พัฒนา',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 1680,
+    households: 420,
+    headmanName: 'นางสาวจารุวรรณ ชัยเจริญ',
+    contactPhone: '089-012-3456',
+    zone: 'เขต 1',
+    coordinates: { x: 55, y: 76 }
+  },
+  {
+    id: 'v-10',
+    orderNumber: 10,
+    code: '10',
+    villageName: 'บ้านน้ำใส',
+    subdistrict: 'ตำบลน้ำใส',
+    district: 'อำเภอเมือง',
+    status: 'no_plan',
+    planYears: '-',
+    population: 620,
+    households: 155,
+    headmanName: 'นายสุเทพ ยิ่งเจริญ',
+    contactPhone: '080-123-4567',
+    zone: 'เขต 3',
+    coordinates: { x: 82, y: 72 }
+  },
+  {
+    id: 'v-11',
+    orderNumber: 11,
+    code: '11',
+    villageName: 'บ้านโนนม่วง',
+    subdistrict: 'ตำบลศิลา',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 2450,
+    households: 680,
+    headmanName: 'นายณรงค์ เกียรติคุณ',
+    contactPhone: '081-345-6789',
+    zone: 'เขต 1',
+    coordinates: { x: 22, y: 45 }
+  },
+  {
+    id: 'v-12',
+    orderNumber: 12,
+    code: '12',
+    villageName: 'บ้านหนองกุง',
+    subdistrict: 'ตำบลศิลา',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 1890,
+    households: 510,
+    headmanName: 'นายวิเชียร สาระคำ',
+    contactPhone: '082-456-7890',
+    zone: 'เขต 1',
+    coordinates: { x: 34, y: 78 }
+  },
+  {
+    id: 'v-13',
+    orderNumber: 13,
+    code: '13',
+    villageName: 'บ้านดอนหญ้านาง',
+    subdistrict: 'ตำบลศิลา',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 1340,
+    households: 360,
+    headmanName: 'นายสุริยันต์ สรรพคุณ',
+    contactPhone: '083-567-8901',
+    zone: 'เขต 2',
+    coordinates: { x: 65, y: 52 }
+  },
+  {
+    id: 'v-14',
+    orderNumber: 14,
+    code: '14',
+    villageName: 'บ้านหนองไผ่',
+    subdistrict: 'ตำบลศิลา',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 2100,
+    households: 590,
+    headmanName: 'นายมนัส ปราชญ์ดี',
+    contactPhone: '084-678-9012',
+    zone: 'เขต 2',
+    coordinates: { x: 74, y: 62 }
+  },
+  {
+    id: 'v-15',
+    orderNumber: 15,
+    code: '15',
+    villageName: 'บ้านโกทา',
+    subdistrict: 'ตำบลศิลา',
+    district: 'อำเภอเมือง',
+    status: 'has_plan',
+    planYears: '2567 - 2571',
+    population: 1750,
+    households: 480,
+    headmanName: 'นายเอกชัย ภักดีสุวรรณ',
+    contactPhone: '085-789-0123',
+    zone: 'เขต 3',
+    coordinates: { x: 52, y: 35 }
+  }
+];
 
 interface VillagePlanViewProps {
   projects: ProjectData[];
@@ -62,2004 +301,1433 @@ interface VillagePlanViewProps {
 export const VillagePlanView: React.FC<VillagePlanViewProps> = ({
   projects,
   onViewProjectDetail,
-  onRestoreInitialData,
   onAddNewProject,
-  onUpdateProject,
-  currentUser,
-  onSwitchToReport
+  currentUser
 }) => {
-  // Navigation State for 3 Levels:
-  // Level 1: Zone overview (3 zones)
-  // Level 2: Village overview within selected zone
-  // Level 3: Projects within selected village
-  const [currentLevel, setCurrentLevel] = useState<1 | 2 | 3>(1);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
-  const [selectedVillageNumber, setSelectedVillageNumber] = useState<number | null>(null);
+  // Main Village Plans State
+  const [villagePlans, setVillagePlans] = useState<VillagePlanItem[]>(INITIAL_VILLAGE_PLANS);
 
-  // Filters matching Top Filter Controls Component (บรรทัดที่ 2 - 3 ตามรูปที่ 1)
-  const [fiscalYear, setFiscalYear] = useState<string>('all');
-  const [selectedStrategy, setSelectedStrategy] = useState<string>('');
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  // Filters State
   const [searchKeyword, setSearchKeyword] = useState<string>('');
-  const [minBudget, setMinBudget] = useState<string>('');
-  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [selectedSubdistrict, setSelectedSubdistrict] = useState<string>('ทั้งหมด');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('ทั้งหมด');
+  const [selectedStatus, setSelectedStatus] = useState<string>('ทั้งหมด');
 
-  // Status and View filters
-  const [budgetStatusFilter, setBudgetStatusFilter] = useState<
-    'all' | 'unbudgeted' | 'budgeted' | 'in_progress' | 'completed' | 'cancelled'
-  >('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  // Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
 
-  const canUpdateStatus = Boolean(currentUser && currentUser.role !== 'public' && onUpdateProject);
+  // Selected village for detail modal
+  const [selectedVillageDetail, setSelectedVillageDetail] = useState<VillagePlanItem | null>(null);
 
-  const handlePrint = () => {
-    window.print();
+  // Create new village plan modal
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [newVillageForm, setNewVillageForm] = useState({
+    villageName: '',
+    subdistrict: 'ตำบลหนองบัว',
+    district: 'อำเภอเมือง',
+    status: 'has_plan' as 'has_plan' | 'in_progress' | 'no_plan',
+    planYears: '2567 - 2571',
+    headmanName: '',
+    contactPhone: '',
+    population: '',
+    households: '',
+    zone: 'เขต 1'
+  });
+
+  // Action Menu dropdown per row
+  const [openActionDropdownId, setOpenActionDropdownId] = useState<string | null>(null);
+
+  // Notification / Toast Message
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3200);
   };
 
-  // Helper to get total budget for a project
-  const getProjectBudget = (p: ProjectData): number => {
-    if (p.budgetApproved && p.budgetApproved > 0) return p.budgetApproved;
-    if (p.budgetPlan && p.budgetPlan > 0) return p.budgetPlan;
-    return 0;
-  };
+  // Distinct subdistricts & districts for dropdowns
+  const subdistrictsList = useMemo(() => {
+    const list = Array.from(new Set(villagePlans.map((v) => v.subdistrict)));
+    return ['ทั้งหมด', ...list];
+  }, [villagePlans]);
 
-  // 1. Reactive filtered projects based on the Top Filter Controls (Line 1 - 3)
-  const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
-      // 1. Fiscal year
-      if (fiscalYear !== 'all') {
-        const yearBudget = p.budgetByYear?.[fiscalYear as keyof typeof p.budgetByYear];
-        const matchYear = p.year === fiscalYear || (yearBudget !== undefined && yearBudget > 0);
-        if (!matchYear) return false;
-      }
+  const districtsList = useMemo(() => {
+    const list = Array.from(new Set(villagePlans.map((v) => v.district)));
+    return ['ทั้งหมด', ...list];
+  }, [villagePlans]);
 
-      // 2. Strategy (ประเด็นการพัฒนา)
-      if (selectedStrategy && p.planStrategy !== selectedStrategy) {
-        return false;
-      }
+  // Reactive KPI Statistics
+  const stats = useMemo(() => {
+    const total = villagePlans.length;
+    const hasPlan = villagePlans.filter((v) => v.status === 'has_plan').length;
+    const inProgress = villagePlans.filter((v) => v.status === 'in_progress').length;
+    const noPlan = villagePlans.filter((v) => v.status === 'no_plan').length;
 
-      // 3. Department (ผู้รับผิดชอบ/หน่วยงาน)
-      if (selectedDepartment && p.department !== selectedDepartment) {
-        return false;
-      }
-
-      // 4. Keyword search (ชื่อโครงการ, รหัส ID, วัตถุประสงค์, เป้าหมาย, หมู่บ้าน, เขต)
-      if (searchKeyword.trim()) {
-        const term = searchKeyword.toLowerCase().trim();
-        const codeMatch = (p.code || p.id || '').toLowerCase().includes(term);
-        const nameMatch = (p.name || '').toLowerCase().includes(term);
-        const objMatch = (p.objective || '').toLowerCase().includes(term);
-        const targetMatch = (p.target || '').toLowerCase().includes(term);
-        const deptMatch = (p.department || '').toLowerCase().includes(term);
-        const stratMatch = (p.planStrategy || '').toLowerCase().includes(term);
-        const villageMatch =
-          (p.village || '').toLowerCase().includes(term) ||
-          (p.villageNumber !== undefined && String(p.villageNumber) === term) ||
-          (p.zone || '').toLowerCase().includes(term);
-        const noteMatch = (p.executionProgressNote || '').toLowerCase().includes(term);
-
-        if (
-          !codeMatch &&
-          !nameMatch &&
-          !objMatch &&
-          !targetMatch &&
-          !deptMatch &&
-          !stratMatch &&
-          !villageMatch &&
-          !noteMatch
-        ) {
-          return false;
-        }
-      }
-
-      // 5. Min budget (งบประมาณรวม บาท)
-      if (minBudget.trim()) {
-        const min = Number(minBudget.replace(/,/g, ''));
-        const prjBudget = getProjectBudget(p);
-        if (!isNaN(min) && prjBudget < min) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [projects, fiscalYear, selectedStrategy, selectedDepartment, searchKeyword, minBudget]);
-
-  // Reactive Totals for Top Header Badge and Banner Overview
-  const totalFilteredProjects = filteredProjects.length;
-  const totalFilteredBudget = useMemo(
-    () => filteredProjects.reduce((sum, p) => sum + getProjectBudget(p), 0),
-    [filteredProjects]
-  );
-
-  // Filter Reset Handlers
-  const handleReset = () => {
-    setFiscalYear('all');
-    setSelectedStrategy('');
-    setSelectedDepartment('');
-    setSearchKeyword('');
-    setMinBudget('');
-    setBudgetStatusFilter('all');
-    setYearFilter('all');
-  };
-
-  const handleShowAll = () => {
-    setFiscalYear('all');
-    setSelectedStrategy('');
-    setSelectedDepartment('');
-    setSearchKeyword('');
-    setMinBudget('');
-    setBudgetStatusFilter('all');
-    setYearFilter('all');
-    setCurrentLevel(1);
-    setSelectedZoneId(null);
-    setSelectedVillageNumber(null);
-  };
-
-  const handleExportCSV = () => {
-    const headers = [
-      'ที่',
-      'รหัสโครงการ',
-      'ชื่อโครงการ',
-      'ประเด็นการพัฒนา',
-      'เขต',
-      'หมู่ที่',
-      'หมู่บ้าน',
-      'ปีงบประมาณ',
-      'งบประมาณ (บาท)',
-      'สถานะการตั้งงบประมาณ',
-      'สถานะการดำเนินงานโครงการ',
-      'หมายเหตุความก้าวหน้า',
-      'หน่วยงาน'
-    ];
-
-    const rows = filteredProjects.map((p, idx) => {
-      const isAllocated = isProjectBudgetAllocated(p);
-      const execSt = getExecutionStatus(p);
-      const execLabel = isAllocated
-        ? EXECUTION_STATUS_CONFIG[execSt]?.label || 'อยู่ระหว่างดำเนินการ'
-        : 'อยู่ในแผน (ยังไม่ตั้งงบ)';
-
-      return [
-        idx + 1,
-        `"${p.code || p.id || ''}"`,
-        `"${(p.name || '').replace(/"/g, '""')}"`,
-        `"${(p.planStrategy || '').replace(/"/g, '""')}"`,
-        `"${p.zone || ''}"`,
-        `"${p.villageNumber || ''}"`,
-        `"${(p.village || '').replace(/"/g, '""')}"`,
-        `"${p.year || ''}"`,
-        p.budgetApproved || p.budgetPlan || 0,
-        `"${isAllocated ? 'ตั้งงบประมาณแล้ว' : 'อยู่ในแผน (ยังไม่ตั้งงบ)'}"`,
-        `"${execLabel}"`,
-        `"${(p.executionProgressNote || '').replace(/"/g, '""')}"`,
-        `"${p.department || ''}"`
-      ];
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `รายงานแผนพัฒนารายหมู่บ้าน_ผ02_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    setShowExportDropdown(false);
-  };
-
-  // Find selected zone and village objects
-  const activeZone = useMemo(() => {
-    if (!selectedZoneId) return null;
-    return SILA_ZONES.find((z) => z.id === selectedZoneId) || null;
-  }, [selectedZoneId]);
-
-  const activeVillage = useMemo(() => {
-    if (selectedVillageNumber === null) return null;
-    return ALL_VILLAGES.find((v) => v.villageNumber === selectedVillageNumber) || null;
-  }, [selectedVillageNumber]);
-
-  // Precompute statistics per zone (Reactivly using filteredProjects)
-  const zoneStats = useMemo(() => {
-    return SILA_ZONES.map((zone) => {
-      const zoneProjects = filteredProjects.filter((p) => isProjectInZone(p, zone));
-      const totalBudget = zoneProjects.reduce((sum, p) => sum + getProjectBudget(p), 0);
-      const budgetedProjects = zoneProjects.filter((p) => isProjectBudgetAllocated(p));
-      const unbudgetedProjects = zoneProjects.filter((p) => !isProjectBudgetAllocated(p));
-      const budgetedCount = budgetedProjects.length;
-      const unbudgetedCount = unbudgetedProjects.length;
-
-      // Project Implementation Statuses for budgeted projects
-      const completedCount = budgetedProjects.filter((p) => p.executionStatus === 'completed').length;
-      const inProgressCount = budgetedProjects.filter(
-        (p) => p.executionStatus === 'in_progress' || !p.executionStatus || p.executionStatus === 'not_started'
-      ).length;
-      const cancelledCount = budgetedProjects.filter((p) => p.executionStatus === 'cancelled').length;
-
-      // Completion rate: % of completed projects among those with allocated budget
-      const completionRate =
-        budgetedCount > 0 ? Math.round((completedCount / budgetedCount) * 100) : 0;
-
-      return {
-        zone,
-        totalVillages: zone.villages.length,
-        totalProjects: zoneProjects.length,
-        totalBudget,
-        budgetedCount,
-        unbudgetedCount,
-        completedCount,
-        inProgressCount,
-        cancelledCount,
-        completionRate
-      };
-    });
-  }, [filteredProjects]);
-
-  // Precompute statistics per village in the active zone (Reactively using filteredProjects)
-  const villageStatsInActiveZone = useMemo(() => {
-    if (!activeZone) return [];
-
-    return activeZone.villages.map((village) => {
-      const vProjects = filteredProjects.filter((p) => isProjectInVillage(p, village));
-      const totalBudget = vProjects.reduce((sum, p) => sum + getProjectBudget(p), 0);
-      const budgetedProjects = vProjects.filter((p) => isProjectBudgetAllocated(p));
-      const unbudgetedProjects = vProjects.filter((p) => !isProjectBudgetAllocated(p));
-      const budgetedCount = budgetedProjects.length;
-      const unbudgetedCount = unbudgetedProjects.length;
-
-      const completedCount = budgetedProjects.filter((p) => p.executionStatus === 'completed').length;
-      const inProgressCount = budgetedProjects.filter(
-        (p) => p.executionStatus === 'in_progress' || !p.executionStatus || p.executionStatus === 'not_started'
-      ).length;
-      const cancelledCount = budgetedProjects.filter((p) => p.executionStatus === 'cancelled').length;
-
-      // Completion rate for budgeted projects
-      const completionRate =
-        budgetedCount > 0 ? Math.round((completedCount / budgetedCount) * 100) : 0;
-
-      return {
-        village,
-        projects: vProjects,
-        totalProjects: vProjects.length,
-        totalBudget,
-        budgetedCount,
-        unbudgetedCount,
-        completedCount,
-        inProgressCount,
-        cancelledCount,
-        completionRate
-      };
-    });
-  }, [activeZone, filteredProjects]);
-
-  // Filtered villages in active zone by search keyword
-  const filteredVillages = useMemo(() => {
-    if (!searchKeyword.trim()) return villageStatsInActiveZone;
-    const term = searchKeyword.toLowerCase().trim();
-    return villageStatsInActiveZone.filter(
-      (item) =>
-        item.village.villageName.toLowerCase().includes(term) ||
-        item.village.shortName.toLowerCase().includes(term) ||
-        String(item.village.villageNumber).includes(term)
-    );
-  }, [villageStatsInActiveZone, searchKeyword]);
-
-  // Projects in the selected village (Level 3 - Reactively using filteredProjects)
-  const villageProjects = useMemo(() => {
-    if (!activeVillage) return [];
-    let list = filteredProjects.filter((p) => isProjectInVillage(p, activeVillage));
-
-    // Budget Allocation & Execution Status Filter
-    if (budgetStatusFilter !== 'all') {
-      if (budgetStatusFilter === 'budgeted') {
-        list = list.filter((p) => isProjectBudgetAllocated(p));
-      } else if (budgetStatusFilter === 'unbudgeted') {
-        list = list.filter((p) => !isProjectBudgetAllocated(p));
-      } else if (budgetStatusFilter === 'completed') {
-        list = list.filter((p) => isProjectBudgetAllocated(p) && p.executionStatus === 'completed');
-      } else if (budgetStatusFilter === 'in_progress') {
-        list = list.filter(
-          (p) =>
-            isProjectBudgetAllocated(p) &&
-            (p.executionStatus === 'in_progress' || !p.executionStatus || p.executionStatus === 'not_started')
-        );
-      } else if (budgetStatusFilter === 'cancelled') {
-        list = list.filter((p) => isProjectBudgetAllocated(p) && p.executionStatus === 'cancelled');
-      }
-    }
-
-    if (yearFilter !== 'all') {
-      list = list.filter((p) => p.year === yearFilter);
-    }
-
-    return list;
-  }, [activeVillage, filteredProjects, budgetStatusFilter, yearFilter]);
-
-  // Active Village summary stats (all projects in active village before budgetStatusFilter)
-  const activeVillageStats = useMemo(() => {
-    if (!activeVillage) return null;
-    const all = filteredProjects.filter((p) => isProjectInVillage(p, activeVillage));
-    const budgeted = all.filter((p) => isProjectBudgetAllocated(p));
-    const completed = budgeted.filter((p) => p.executionStatus === 'completed');
-    const inProgress = budgeted.filter(
-      (p) => p.executionStatus === 'in_progress' || !p.executionStatus || p.executionStatus === 'not_started'
-    );
-    const cancelled = budgeted.filter((p) => p.executionStatus === 'cancelled');
-    const unbudgeted = all.length - budgeted.length;
-    const totalBudget = all.reduce((sum, p) => sum + getProjectBudget(p), 0);
-    const budgetedBudget = budgeted.reduce((sum, p) => sum + getProjectBudget(p), 0);
-    const completionRate = budgeted.length > 0 ? Math.round((completed.length / budgeted.length) * 100) : 0;
+    const hasPlanPct = total > 0 ? ((hasPlan / total) * 100).toFixed(1) : '0.0';
+    const inProgressPct = total > 0 ? ((inProgress / total) * 100).toFixed(1) : '0.0';
+    const noPlanPct = total > 0 ? ((noPlan / total) * 100).toFixed(1) : '0.0';
 
     return {
-      totalProjects: all.length,
-      budgetedCount: budgeted.length,
-      unbudgetedCount: unbudgeted,
-      completedCount: completed.length,
-      inProgressCount: inProgress.length,
-      cancelledCount: cancelled.length,
-      totalBudget,
-      budgetedBudget,
-      completionRate,
+      total,
+      hasPlan,
+      inProgress,
+      noPlan,
+      hasPlanPct,
+      inProgressPct,
+      noPlanPct
     };
-  }, [activeVillage, filteredProjects]);
+  }, [villagePlans]);
 
-  // Navigation Handlers
-  const handleSelectZone = (zoneId: string) => {
-    setSelectedZoneId(zoneId);
-    setSelectedVillageNumber(null);
-    setCurrentLevel(2);
+  // Filtered Village Plans
+  const filteredVillages = useMemo(() => {
+    return villagePlans.filter((v) => {
+      // Subdistrict filter
+      if (selectedSubdistrict !== 'ทั้งหมด' && v.subdistrict !== selectedSubdistrict) {
+        return false;
+      }
+      // District filter
+      if (selectedDistrict !== 'ทั้งหมด' && v.district !== selectedDistrict) {
+        return false;
+      }
+      // Status filter
+      if (selectedStatus !== 'ทั้งหมด') {
+        if (selectedStatus === 'มีแผนแล้ว' && v.status !== 'has_plan') return false;
+        if (selectedStatus === 'อยู่ระหว่างจัดทำ' && v.status !== 'in_progress') return false;
+        if (selectedStatus === 'ยังไม่จัดทำ' && v.status !== 'no_plan') return false;
+      }
+      // Search keyword (ชื่อหมู่บ้าน / รหัสหมู่บ้าน / ตำบล / ผู้ใหญ่บ้าน)
+      if (searchKeyword.trim()) {
+        const kw = searchKeyword.trim().toLowerCase();
+        const matchName = v.villageName.toLowerCase().includes(kw);
+        const matchCode = v.code.toLowerCase().includes(kw);
+        const matchSub = v.subdistrict.toLowerCase().includes(kw);
+        const matchHead = (v.headmanName || '').toLowerCase().includes(kw);
+        if (!matchName && !matchCode && !matchSub && !matchHead) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [villagePlans, selectedSubdistrict, selectedDistrict, selectedStatus, searchKeyword]);
+
+  // Paginated records
+  const totalPages = Math.ceil(filteredVillages.length / pageSize) || 1;
+  const paginatedVillages = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVillages.slice(start, start + pageSize);
+  }, [filteredVillages, currentPage, pageSize]);
+
+  // Reset filters
+  const handleResetFilters = () => {
     setSearchKeyword('');
+    setSelectedSubdistrict('ทั้งหมด');
+    setSelectedDistrict('ทั้งหมด');
+    setSelectedStatus('ทั้งหมด');
+    setCurrentPage(1);
   };
 
-  const handleSelectVillage = (villageNum: number) => {
-    setSelectedVillageNumber(villageNum);
-    setCurrentLevel(3);
-    setSearchKeyword('');
+  // Find projects related to the selected village in detail modal
+  const villageProjects = useMemo(() => {
+    if (!selectedVillageDetail) return [];
+    const vName = selectedVillageDetail.villageName;
+    const vCodeNum = parseInt(selectedVillageDetail.code, 10);
+    return projects.filter((p) => {
+      if (p.village && p.village.includes(vName.replace('บ้าน', ''))) return true;
+      if (p.villageNumber === vCodeNum) return true;
+      return false;
+    });
+  }, [selectedVillageDetail, projects]);
+
+  // Village total budget from projects
+  const villageTotalBudget = useMemo(() => {
+    return villageProjects.reduce((sum, p) => sum + (p.budgetApproved || p.budgetPlan || 0), 0);
+  }, [villageProjects]);
+
+  // Handle Download Excel/CSV
+  const handleDownloadExcel = () => {
+    const headers = ['ลำดับ', 'รหัสหมู่บ้าน', 'ชื่อหมู่บ้าน', 'ตำบล', 'อำเภอ', 'สถานะแผน', 'ปีที่จัดทำ', 'ประชากร', 'ครัวเรือน', 'ผู้นำชุมชน', 'เบอร์ติดต่อ'];
+    const rows = villagePlans.map((v, i) => [
+      i + 1,
+      `"${v.code}"`,
+      `"${v.villageName}"`,
+      `"${v.subdistrict}"`,
+      `"${v.district}"`,
+      `"${v.status === 'has_plan' ? 'มีแผนแล้ว' : v.status === 'in_progress' ? 'อยู่ระหว่างจัดทำ' : 'ยังไม่จัดทำ'}"`,
+      `"${v.planYears}"`,
+      v.population || 0,
+      v.households || 0,
+      `"${v.headmanName || '-'}"`,
+      `"${v.contactPhone || '-'}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `รายชื่อหมู่บ้านและแผนพัฒนาท้องถิ่น_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    showToast('ดาวน์โหลดไฟล์ข้อมูลหมู่บ้าน (Excel/CSV) สำเร็จ');
   };
 
-  const handleGoToLevel1 = () => {
-    setSelectedZoneId(null);
-    setSelectedVillageNumber(null);
-    setCurrentLevel(1);
-    setSearchKeyword('');
+  // Handle Download Form Template
+  const handleDownloadForm = () => {
+    const text = `แบบฟอร์มการจัดทำแผนพัฒนาหมู่บ้าน/ชุมชน เทศบาลเมืองศิลา
+ประจำปีงบประมาณ พ.ศ. 2567 - 2571
+==================================================
+1. ข้อมูลพื้นฐานหมู่บ้าน/ชุมชน
+   ชื่อหมู่บ้าน: ..................................................... หมู่ที่: ........... ตำบล: ....................................
+   จำนวนประชากร: ................... คน   จำนวนครัวเรือน: ................... ครัวเรือน
+   ชื่อผู้นำชุมชน/ผู้ใหญ่บ้าน: .................................................... โทรศัพท์: ..................................
+
+2. สรุปปัญหาและความต้องการของชุมชน
+   (1) ด้านโครงสร้างพื้นฐาน: ............................................................................................
+   (2) ด้านเศรษฐกิจและอาชีพ: ............................................................................................
+   (3) ด้านคุณภาพชีวิตและสาธารณสุข: ................................................................................
+
+3. บัญชีโครงการพัฒนาตามแผนหมู่บ้าน
+   - โครงการที่ 1: .................................................... งบประมาณ: ............................. บาท
+   - โครงการที่ 2: .................................................... งบประมาณ: ............................. บาท
+==================================================`;
+    const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `แบบฟอร์มแผนรายหมู่บ้าน_ทม_ศิลา.txt`;
+    link.click();
+    showToast('ดาวน์โหลดแบบฟอร์มแผนรายหมู่บ้านเรียบร้อยแล้ว');
   };
 
-  const handleGoToLevel2 = () => {
-    setSelectedVillageNumber(null);
-    setCurrentLevel(2);
-    setSearchKeyword('');
+  // Handle Download Manual Guide
+  const handleDownloadGuide = () => {
+    const text = `คู่มือการจัดทำแผนรายหมู่บ้านและแผนชุมชน เทศบาลเมืองศิลา
+========================================================
+ขั้นตอนที่ 1: การสำรวจข้อมูลและจัดประชุมประชาคมหมู่บ้าน
+ขั้นตอนที่ 2: การวิเคราะห์ปัญหา จัดลำดับความสำคัญของโครงการ
+ขั้นตอนที่ 3: การรวบรวมร่างแผนและส่งมอบให้กองยุทธศาสตร์และงบประมาณ
+ขั้นตอนที่ 4: การบรรจุโครงการลงในแผนพัฒนาท้องถิ่น (แบบ ผ.02)
+ขั้นตอนที่ 5: การติดตามและประเมินผลการดำเนินโครงการ
+========================================================`;
+    const blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `คู่มือการจัดทำแผนรายหมู่บ้าน_ทม_ศิลา.txt`;
+    link.click();
+    showToast('ดาวน์โหลดคู่มือการจัดทำแผนรายหมู่บ้านเรียบร้อยแล้ว');
+  };
+
+  // Submit New Village Plan
+  const handleCreateVillageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVillageForm.villageName.trim()) {
+      alert('กรุณากรอกชื่อหมู่บ้าน');
+      return;
+    }
+
+    const nextOrder = villagePlans.length + 1;
+    const nextCode = nextOrder < 10 ? `0${nextOrder}` : `${nextOrder}`;
+
+    const newVillage: VillagePlanItem = {
+      id: `v-${Date.now()}`,
+      orderNumber: nextOrder,
+      code: nextCode,
+      villageName: newVillageForm.villageName.trim(),
+      subdistrict: newVillageForm.subdistrict,
+      district: newVillageForm.district,
+      status: newVillageForm.status,
+      planYears: newVillageForm.status === 'no_plan' ? '-' : newVillageForm.planYears,
+      population: parseInt(newVillageForm.population, 10) || 1000,
+      households: parseInt(newVillageForm.households, 10) || 250,
+      headmanName: newVillageForm.headmanName || 'ผู้นำชุมชน',
+      contactPhone: newVillageForm.contactPhone || '-',
+      zone: newVillageForm.zone,
+      coordinates: { x: 50, y: 50 }
+    };
+
+    setVillagePlans([...villagePlans, newVillage]);
+    setIsCreateModalOpen(false);
+    setNewVillageForm({
+      villageName: '',
+      subdistrict: 'ตำบลหนองบัว',
+      district: 'อำเภอเมือง',
+      status: 'has_plan',
+      planYears: '2567 - 2571',
+      headmanName: '',
+      contactPhone: '',
+      population: '',
+      households: '',
+      zone: 'เขต 1'
+    });
+    showToast(`สร้างแผนรายหมู่บ้าน "${newVillage.villageName}" เรียบร้อยแล้ว`);
   };
 
   return (
-    <div id="village-plan-view-container" className="flex-1 flex flex-col min-w-0 bg-slate-50 h-full min-h-0 overflow-hidden">
+    <div id="village-plan-view-container" className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] h-full min-h-0 overflow-y-auto">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-sm font-medium animate-in fade-in slide-in-from-top-3 duration-200">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* ========================================================================= */}
-      {/* 1. ส่วนบนสุด บรรทัดที่ 1 (Header Bar): แถบหัวข้อสีเขียวเข้ม ผ.02 */}
+      {/* 1. Top Header Bar (Matching screenshot breadcrumb & staff avatar profile) */}
       {/* ========================================================================= */}
-      <header
-        id="village-plan-header-bar"
-        className="bg-[#055740] text-white px-4 py-3 sm:px-6 shadow-xs flex items-center justify-between shrink-0 z-20 print:hidden"
-      >
-        <div className="flex items-center gap-3.5">
-          <div className="bg-[#034131] border border-emerald-500/60 text-emerald-200 font-extrabold px-2.5 py-1 rounded-md text-sm tracking-wider font-mono">
-            ผ.02
-          </div>
-          <h1 className="text-sm sm:text-base md:text-lg font-bold tracking-tight text-white">
-            ผ.02 บัญชีรายละเอียดโครงการพัฒนาท้องถิ่น (แบบ ผ.02) - แผนพัฒนารายหมู่บ้าน | ระบบแผนพัฒนาเทศบาลเมืองศิลา
-          </h1>
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-2xs">
+        {/* Left: Breadcrumbs */}
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
+          <button
+            type="button"
+            className="p-1.5 -ml-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer mr-1"
+            title="สลับเมนู"
+          >
+            <span className="text-base font-bold">☰</span>
+          </button>
+          <Home className="w-4 h-4 text-slate-400" />
+          <span className="hover:text-slate-700 cursor-pointer">หน้าหลัก</span>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-800 font-bold">แผนรายหมู่บ้าน</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="bg-[#047857] text-white text-sm font-bold px-3.5 py-1.5 rounded-full border border-emerald-400/50 shadow-2xs font-mono">
-            {totalFilteredProjects.toLocaleString()} โครงการ
+        {/* Right: Notifications & User Profile */}
+        <div className="flex items-center gap-3">
+          {/* Notification bell with badge 3 */}
+          <button
+            type="button"
+            className="relative p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors cursor-pointer"
+            title="การแจ้งเตือน"
+          >
+            <span className="text-lg">🔔</span>
+            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
+              3
+            </span>
+          </button>
+
+          {/* User Profile Chip */}
+          <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs select-none">
+              {currentUser?.fullName ? currentUser.fullName.charAt(0) : 'ก'}
+            </div>
+            <div className="hidden sm:block text-left leading-tight">
+              <div className="text-xs font-bold text-slate-800">
+                {currentUser?.fullName || 'นางสาวกมลวรรณ แซ่ดี'}
+              </div>
+              <div className="text-[11px] text-slate-500">
+                {currentUser?.role === 'admin'
+                  ? 'ผู้ดูแลระบบ (Admin)'
+                  : currentUser?.role === 'executive'
+                  ? 'ผู้บริหาร (Executive)'
+                  : 'เจ้าหน้าที่ (Staff)'}
+              </div>
+            </div>
+            <span className="text-slate-400 text-xs hidden sm:inline">▾</span>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4 print:p-0 print:overflow-visible">
+      <div className="p-4 sm:p-6 max-w-[1600px] w-full mx-auto space-y-5">
+        
         {/* ========================================================================= */}
-        {/* บรรทัดที่ 2 - 3 (Filter Controls Component): วางการ์ดฟอร์มค้นหาโครงการ (รูปที่ 1) */}
+        {/* 2. Page Title Banner & Create Button */}
         {/* ========================================================================= */}
-        <section
-          id="village-plan-filter-controls-card"
-          className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-4 print:hidden"
-        >
-          {/* แถวบน: Dropdown เลือกปีงบประมาณ */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
-            <label
-              htmlFor="filter-fiscal-year"
-              className="text-base font-bold text-slate-800 min-w-[140px]"
-            >
-              เลือกปีงบประมาณ:
-            </label>
-            <div className="relative flex-1 max-w-sm">
-              <select
-                id="filter-fiscal-year"
-                value={fiscalYear}
-                onChange={(e) => setFiscalYear(e.target.value)}
-                className="w-full text-base bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 min-h-[44px] text-slate-900 font-semibold focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 cursor-pointer"
-              >
-                <option value="all">ทั้งหมด (พ.ศ. 2571 - 2575)</option>
-                <option value="2571">ปี พ.ศ. 2571</option>
-                <option value="2572">ปี พ.ศ. 2572</option>
-                <option value="2573">ปี พ.ศ. 2573</option>
-                <option value="2574">ปี พ.ศ. 2574</option>
-                <option value="2575">ปี พ.ศ. 2575</option>
-              </select>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-500/20 shrink-0">
+              <Home className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                แผนรายหมู่บ้าน
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 font-medium">
+                ข้อมูลแผนพัฒนาท้องถิ่นระดับหมู่บ้าน/ชุมชน ครบถ้วน เข้าถึงง่าย เพื่อการพัฒนาที่ยั่งยืน
+              </p>
             </div>
           </div>
 
-          {/* แถวกลาง: 4 คอลัมน์ตัวกรองละเอียด */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
-            {/* 1. ประเด็นการพัฒนา */}
-            <div>
-              <label
-                htmlFor="filter-strategy"
-                className="block text-base font-bold text-slate-800 mb-1.5"
-              >
-                ประเด็นการพัฒนา:
-              </label>
-              <select
-                id="filter-strategy"
-                value={selectedStrategy}
-                onChange={(e) => setSelectedStrategy(e.target.value)}
-                className="w-full text-base bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 min-h-[44px] text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 cursor-pointer truncate font-medium"
-              >
-                <option value="">ทั้งหมดทุกประเด็นการพัฒนา</option>
-                {DEVELOPMENT_STRATEGIES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Create Button */}
+          <button
+            type="button"
+            id="btn-create-village-plan"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-xs hover:shadow-md transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>สร้างแผนรายหมู่บ้านใหม่</span>
+          </button>
+        </div>
 
-            {/* 2. ผู้รับผิดชอบ (หน่วยงาน) */}
-            <div>
-              <label
-                htmlFor="filter-department"
-                className="block text-base font-bold text-slate-800 mb-1.5"
-              >
-                ผู้รับผิดชอบ (สำนัก/กอง):
-              </label>
-              <select
-                id="filter-department"
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="w-full text-base bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 min-h-[44px] text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 cursor-pointer truncate font-medium"
-              >
-                <option value="">ทั้งหมดทุกสำนัก/กอง</option>
-                {DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
+        {/* ========================================================================= */}
+        {/* 3. 4 Top KPI Cards (Exact numbers: 15, 12 [80%], 2 [13.3%], 1 [6.7%]) */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* Card 1: จำนวนหมู่บ้านทั้งหมด */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-4 hover:shadow-xs transition-shadow">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-500/20 shrink-0">
+              <Home className="w-6 h-6" />
             </div>
-
-            {/* 3. ค้นหาชื่อโครงการ */}
-            <div>
-              <label
-                htmlFor="filter-keyword"
-                className="block text-base font-bold text-slate-800 mb-1.5"
-              >
-                ค้นหาชื่อโครงการ:
-              </label>
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  id="filter-keyword"
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="ค้นหาชื่อโครงการ..."
-                  className="w-full pl-9.5 pr-3 py-2.5 min-h-[44px] text-base bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-medium"
-                />
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-500">จำนวนหมู่บ้านทั้งหมด</div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                {stats.total}
               </div>
-            </div>
-
-            {/* 4. ช่องระบุงบประมาณรวม (บาท) */}
-            <div>
-              <label
-                htmlFor="filter-min-budget"
-                className="block text-base font-bold text-slate-800 mb-1.5"
-              >
-                งบประมาณรวม (บาท) ตั้งแต่:
-              </label>
-              <div className="relative">
-                <span className="text-slate-400 text-sm absolute left-3 top-1/2 -translate-y-1/2 font-mono">฿</span>
-                <input
-                  id="filter-min-budget"
-                  type="number"
-                  value={minBudget}
-                  onChange={(e) => setMinBudget(e.target.value)}
-                  placeholder="ระบุงบขั้นต่ำ เช่น 500000"
-                  className="w-full pl-8 pr-3 py-2.5 min-h-[44px] text-base bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
-                />
+              <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                <Home className="w-3 h-3 text-slate-400" />
+                <span>หมู่บ้าน</span>
               </div>
             </div>
           </div>
 
-          {/* แถวล่าง: แถบปุ่มกดแอ็กชัน */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-            {/* ฝั่งซ้าย: ค้นหา, แสดงทั้งหมด, เริ่มใหม่ */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <button
-                id="btn-filter-apply"
-                type="button"
-                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-base font-bold transition-colors cursor-pointer shadow-2xs"
-              >
-                <Search className="w-4 h-4" />
-                <span>ค้นหา</span>
-              </button>
-
-              <button
-                id="btn-filter-show-all"
-                type="button"
-                onClick={handleShowAll}
-                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-base font-bold transition-colors cursor-pointer"
-              >
-                <FolderOpen className="w-4 h-4 text-slate-600" />
-                <span>แสดงทั้งหมด</span>
-              </button>
-
-              <button
-                id="btn-filter-reset"
-                type="button"
-                onClick={handleReset}
-                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-base font-bold transition-colors cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4 text-slate-500" />
-                <span>เริ่มใหม่</span>
-              </button>
-
-              {onSwitchToReport && (
-                <button
-                  id="btn-switch-to-official-report"
-                  type="button"
-                  onClick={onSwitchToReport}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-900 text-base font-bold rounded-xl transition-colors cursor-pointer"
-                  title="เปิดดูรายงานทางการ แบบ ผ.02 รายหมู่บ้าน (10 คอลัมน์)"
-                >
-                  <FileText className="w-4 h-4 text-emerald-700" />
-                  <span>รายงานทางการ (แบบ ผ.02)</span>
-                </button>
-              )}
+          {/* Card 2: มีแผนแล้ว */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-4 hover:shadow-xs transition-shadow">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shadow-emerald-500/20 shrink-0">
+              <FileText className="w-6 h-6" />
             </div>
-
-            {/* ฝั่งขวา: ส่งออกข้อมูล, พิมพ์รายงาน, สิทธิ์ผู้ใช้งาน, เพิ่มโครงการ */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              {/* Dropdown ส่งออกข้อมูล */}
-              <div className="relative">
-                <button
-                  id="btn-export-dropdown"
-                  type="button"
-                  onClick={() => setShowExportDropdown(!showExportDropdown)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-xl text-base font-bold transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Download className="w-4 h-4 text-emerald-600" />
-                  <span>ส่งออกข้อมูล</span>
-                </button>
-
-                {showExportDropdown && (
-                  <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1.5 animate-in fade-in zoom-in-95 duration-100">
-                    <button
-                      type="button"
-                      onClick={handleExportCSV}
-                      className="w-full text-left px-4 py-2.5 text-base text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-2.5 cursor-pointer font-semibold"
-                    >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                      <span>ดาวน์โหลดเป็น CSV</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowExportDropdown(false);
-                        handlePrint();
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-base text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-2.5 cursor-pointer font-semibold"
-                    >
-                      <Printer className="w-4 h-4 text-slate-600" />
-                      <span>พิมพ์หน้ารายการ (PDF)</span>
-                    </button>
-                  </div>
-                )}
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold text-slate-500">มีแผนแล้ว</div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                {stats.hasPlan}
               </div>
-
-              {/* ปุ่มพิมพ์รายงาน */}
-              <button
-                id="btn-print-report"
-                type="button"
-                onClick={handlePrint}
-                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-xl text-base font-bold transition-colors cursor-pointer shadow-2xs"
-              >
-                <Printer className="w-4 h-4 text-slate-600" />
-                <span>พิมพ์รายงาน</span>
-              </button>
-
-              {/* Status Badge สิทธิ์ผู้ใช้งาน */}
-              <div className="inline-flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-sm font-bold">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                <span>
-                  สิทธิ์: {currentUser?.fullName || currentUser?.username || 'ผู้เยี่ยมชมทั่วไป'}
+              <div className="flex items-center justify-between text-[11px] mt-0.5">
+                <span className="text-slate-500">หมู่บ้าน</span>
+                <span className="text-emerald-600 font-bold flex items-center gap-0.5">
+                  <span>↑</span>
+                  <span>{stats.hasPlanPct}%</span>
                 </span>
               </div>
+            </div>
+          </div>
 
-              {/* ปุ่มเพิ่มโครงการ (ถ้ามีสิทธิ์) */}
-              {onAddNewProject && currentUser && currentUser.role !== 'public' && (
+          {/* Card 3: อยู่ระหว่างจัดทำ */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-4 hover:shadow-xs transition-shadow">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-sm shadow-amber-500/20 shrink-0">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold text-slate-500">อยู่ระหว่างจัดทำ</div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                {stats.inProgress}
+              </div>
+              <div className="flex items-center justify-between text-[11px] mt-0.5">
+                <span className="text-slate-500">หมู่บ้าน</span>
+                <span className="text-amber-600 font-bold flex items-center gap-0.5">
+                  <span>↑</span>
+                  <span>{stats.inProgressPct}%</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: ยังไม่จัดทำ */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex items-center gap-4 hover:shadow-xs transition-shadow">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-sm shadow-rose-500/20 shrink-0">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold text-slate-500">ยังไม่จัดทำ</div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                {stats.noPlan}
+              </div>
+              <div className="flex items-center justify-between text-[11px] mt-0.5">
+                <span className="text-slate-500">หมู่บ้าน</span>
+                <span className="text-rose-600 font-bold flex items-center gap-0.5">
+                  <span>↓</span>
+                  <span>{stats.noPlanPct}%</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 4. Filter Toolbar (Search + 3 Selects + ค้นหา + รีเซ็ต) */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-2xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-center">
+            
+            {/* Search Input (md:col-span-4) */}
+            <div className="md:col-span-4 relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchKeyword}
+                onChange={(e) => {
+                  setSearchKeyword(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="ค้นหาชื่อหมู่บ้าน / รหัสหมู่บ้าน / ตำบล ..."
+                className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-slate-50/60 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400 font-medium"
+              />
+              {searchKeyword && (
                 <button
-                  id="btn-add-new-project"
                   type="button"
-                  onClick={() => onAddNewProject()}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-base font-bold transition-colors cursor-pointer shadow-2xs"
+                  onClick={() => setSearchKeyword('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>เพิ่มโครงการ</span>
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
-          </div>
-        </section>
 
-        {/* ========================================================================= */}
-        {/* 2. ส่วนบรรทัดถัดมา: แบนเนอร์สรุปภาพรวมรายพื้นที่ (ตามรูปที่ 2) */}
-        {/* ========================================================================= */}
-        <section
-          id="village-plan-overview-banner"
-          className="bg-gradient-to-r from-[#03231a] via-[#064232] to-[#0a5c45] rounded-2xl p-6 sm:p-7 text-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6"
-        >
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/25 text-emerald-200 text-sm font-bold border border-emerald-400/40">
-              <Sparkles className="w-4 h-4 text-emerald-300" />
-              <span>โครงสร้างการบริหารจัดการแผนพัฒนารายพื้นที่</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              แผนพัฒนารายเขตและหมู่บ้าน เทศบาลเมืองศิลา
-            </h2>
-            <p className="text-base text-emerald-100/90 leading-relaxed font-normal">
-              ครอบคลุม {ALL_VILLAGES.length} หมู่บ้าน แบ่งออกเป็น 3 เขตการปกครองหลัก เพื่อการกระจายงบประมาณและการพัฒนาโครงสร้างพื้นฐาน คุณภาพชีวิต และสิ่งแวดล้อมอย่างทั่วถึง
-            </p>
-          </div>
-
-          {/* กล่องสรุปสถิติด้านขวา: แสดงยอดรวมเชื่อมโยงตามตัวกรองด้านบน */}
-          <div className="grid grid-cols-2 gap-5 bg-white/10 backdrop-blur-xs p-5 rounded-2xl border border-white/20 shrink-0 min-w-[280px]">
-            <div>
-              <div className="text-sm font-semibold text-emerald-200">โครงการทั้งหมด</div>
-              <div className="text-2xl sm:text-3xl font-bold font-mono text-white mt-1">
-                {totalFilteredProjects.toLocaleString()} โครงการ
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-emerald-200">งบประมาณรวม</div>
-              <div className="text-2xl sm:text-3xl font-bold font-mono text-amber-300 mt-1">
-                ฿{totalFilteredBudget.toLocaleString()}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================================= */}
-        {/* แถบนำทางระดับโครงสร้าง (Breadcrumbs & Quick Village Jumper) */}
-        {/* ========================================================================= */}
-        <div className="bg-white rounded-2xl border border-slate-200 px-4 py-3 sm:px-5 sm:py-3.5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
-          {/* Breadcrumb Navigation Trail */}
-          <div className="flex items-center gap-2.5 overflow-x-auto">
-            {currentLevel > 1 && (
-              <button
-                id="btn-village-plan-back"
-                type="button"
-                onClick={currentLevel === 3 ? handleGoToLevel2 : handleGoToLevel1}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm sm:text-base font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer shrink-0"
-              >
-                <ArrowLeft className="w-4 h-4 text-slate-700" />
-                <span>
-                  {currentLevel === 3
-                    ? `กลับไประดับเขต (${activeZone?.name})`
-                    : 'กลับไปภาพรวม 3 เขต'}
+            {/* Select 1: ตำบล */}
+            <div className="md:col-span-2">
+              <div className="relative">
+                <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] font-bold text-slate-500 z-10">
+                  ตำบล
                 </span>
-              </button>
-            )}
-
-            <nav
-              aria-label="Breadcrumb"
-              className="flex items-center gap-2 text-base font-medium overflow-x-auto py-0.5 text-slate-700 scrollbar-none"
-            >
-              {/* Root: Level 1 */}
-              <button
-                id="breadcrumb-level-1"
-                type="button"
-                onClick={handleGoToLevel1}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap text-base ${
-                  currentLevel === 1
-                    ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-300'
-                    : 'hover:bg-slate-100 text-slate-700 font-semibold'
-                }`}
-              >
-                <Home className="w-4 h-4 text-emerald-700" />
-                <span>ภาพรวม 3 เขต</span>
-              </button>
-
-              {/* Step 2: Level 2 */}
-              {currentLevel >= 2 && activeZone && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                  <button
-                    id="breadcrumb-level-2"
-                    type="button"
-                    onClick={handleGoToLevel2}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors cursor-pointer whitespace-nowrap text-base ${
-                      currentLevel === 2
-                        ? `${activeZone.badgeBg} ${activeZone.badgeText} font-bold border ${activeZone.badgeBorder}`
-                        : 'hover:bg-slate-100 text-slate-700 font-semibold'
-                    }`}
-                  >
-                    <Building2 className="w-4 h-4" />
-                    <span>{activeZone.name} ({activeZone.villages.length} หมู่บ้าน)</span>
-                  </button>
-                </>
-              )}
-
-              {/* Step 3: Level 3 */}
-              {currentLevel === 3 && activeVillage && (
-                <>
-                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                  <div
-                    id="breadcrumb-level-3"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 text-white font-bold whitespace-nowrap text-base shadow-2xs"
-                  >
-                    <MapPin className="w-4 h-4" />
-                    <span>{activeVillage.villageName}</span>
-                  </div>
-                </>
-              )}
-            </nav>
-          </div>
-
-          {/* Quick Village Dropdown Jump */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="flex items-center gap-1.5 text-base text-slate-800 font-bold">
-              <MapPin className="w-4 h-4 text-emerald-700" />
-              <span>ไปยังหมู่บ้าน:</span>
-            </div>
-            <select
-              id="select-quick-village-jump"
-              value={selectedVillageNumber || ''}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                if (val) {
-                  const vObj = ALL_VILLAGES.find((v) => v.villageNumber === val);
-                  if (vObj) {
-                    const zObj = SILA_ZONES.find((z) => z.name === vObj.zone);
-                    if (zObj) setSelectedZoneId(zObj.id);
-                    handleSelectVillage(val);
-                  }
-                } else {
-                  handleGoToLevel1();
-                }
-              }}
-              className="text-base bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 min-h-[42px] text-slate-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-600 cursor-pointer font-bold"
-            >
-              <option value="">-- เลือกหมู่บ้านจาก 28 หมู่บ้าน --</option>
-              {SILA_ZONES.map((zone) => (
-                <optgroup key={zone.id} label={zone.name}>
-                  {zone.villages.map((v) => (
-                    <option key={v.villageNumber} value={v.villageNumber}>
-                      ม.{v.villageNumber} {v.shortName}
+                <select
+                  value={selectedSubdistrict}
+                  onChange={(e) => {
+                    setSelectedSubdistrict(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full py-2 px-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 font-medium cursor-pointer"
+                >
+                  {subdistrictsList.map((sub) => (
+                    <option key={sub} value={sub}>
+                      {sub}
                     </option>
                   ))}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Standard 2-Line Official Header for Print & Display */}
-        <div className="text-center py-3 sm:py-4 border-b border-slate-200 print:border-none bg-white rounded-2xl shadow-2xs print:shadow-none p-5">
-          <h2 className="text-lg sm:text-xl font-extrabold text-slate-950 print:text-black leading-snug">
-            {currentLevel === 3 && activeVillage
-              ? `รายงานแผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) ประจำพื้นที่ ${activeVillage.villageName}`
-              : currentLevel === 2 && activeZone
-              ? `รายงานแผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) ${activeZone.fullName}`
-              : 'รายงานแผนพัฒนาท้องถิ่นรายหมู่บ้าน (พ.ศ. 2571-2575)'}
-          </h2>
-          <p className="text-sm sm:text-base font-bold text-slate-800 print:text-black leading-tight mt-1.5">
-            เทศบาลเมืองศิลา อำเภอเมืองขอนแก่น จังหวัดขอนแก่น
-          </p>
-        </div>
-
-        {/* Fallback Banner if projects array is empty */}
-        {(!projects || projects.length === 0) && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center shadow-xs">
-            <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-left">
-                <h4 className="text-xs sm:text-sm font-bold text-amber-900 flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>ไม่พบข้อมูลโครงการในระบบ หรือชุดข้อมูลว่างเปล่า</span>
-                </h4>
-                <p className="text-[11px] text-amber-700 mt-0.5">
-                  ระบบสามารถกู้คืนชุดข้อมูลแผนพัฒนาเทศบาลเมืองศิลา (28 หมู่บ้าน) กลับคืนมาให้ท่านได้ทันที
-                </p>
+                </select>
               </div>
-              {onRestoreInitialData && (
-                <button
-                  type="button"
-                  onClick={onRestoreInitialData}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg shadow-xs cursor-pointer transition-colors shrink-0"
+            </div>
+
+            {/* Select 2: อำเภอ */}
+            <div className="md:col-span-2">
+              <div className="relative">
+                <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] font-bold text-slate-500 z-10">
+                  อำเภอ
+                </span>
+                <select
+                  value={selectedDistrict}
+                  onChange={(e) => {
+                    setSelectedDistrict(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full py-2 px-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 font-medium cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>กู้คืนข้อมูลแผนพัฒนา (28 หมู่บ้าน)</span>
-                </button>
-              )}
+                  {districtsList.map((dist) => (
+                    <option key={dist} value={dist}>
+                      {dist}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+
+            {/* Select 3: สถานะ */}
+            <div className="md:col-span-2">
+              <div className="relative">
+                <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] font-bold text-slate-500 z-10">
+                  สถานะ
+                </span>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => {
+                    setSelectedStatus(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full py-2 px-3 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 font-medium cursor-pointer"
+                >
+                  <option value="ทั้งหมด">ทั้งหมด</option>
+                  <option value="มีแผนแล้ว">มีแผนแล้ว</option>
+                  <option value="อยู่ระหว่างจัดทำ">อยู่ระหว่างจัดทำ</option>
+                  <option value="ยังไม่จัดทำ">ยังไม่จัดทำ</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Buttons: ค้นหา & รีเซ็ต */}
+            <div className="md:col-span-2 flex items-center gap-2">
+              <button
+                type="button"
+                className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>ค้นหา</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="py-2 px-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm shadow-2xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>รีเซ็ต</span>
+              </button>
+            </div>
+
           </div>
-        )}
+        </div>
 
         {/* ========================================================================= */}
-        {/* LEVEL 1: ภาพรวมระดับเขต (3 เขตการปกครอง) */}
+        {/* 5. 2-Column Main Section: Left (Table 8 cols) | Right (3 Widgets 4 cols) */}
         {/* ========================================================================= */}
-        {currentLevel === 1 && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-
-            {/* Instant Search Results Chips if keyword typed at Level 1 */}
-            {searchKeyword.trim() && (
-              <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5">
-                <div className="text-xs font-semibold text-emerald-900 mb-2 flex items-center justify-between">
-                  <span>ผลการค้นหาหมู่บ้านที่ตรงกับ "{searchKeyword}":</span>
-                  <span className="text-[11px] text-emerald-700">คลิกเพื่อเปิดดูโครงการในหมู่บ้าน</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {ALL_VILLAGES.filter(
-                    (v) =>
-                      v.villageName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                      v.shortName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                      String(v.villageNumber) === searchKeyword.trim()
-                  ).map((v) => {
-                    const zObj = SILA_ZONES.find((z) => z.name === v.zone);
-                    return (
-                      <button
-                        key={v.villageNumber}
-                        type="button"
-                        onClick={() => {
-                          if (zObj) setSelectedZoneId(zObj.id);
-                          handleSelectVillage(v.villageNumber);
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-emerald-300 hover:border-emerald-500 hover:bg-emerald-100 text-emerald-900 rounded-lg text-xs font-medium transition-all cursor-pointer shadow-2xs"
-                      >
-                        <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[10px] font-mono font-bold">
-                          {v.zone}
-                        </span>
-                        <span>{v.villageName}</span>
-                        <ChevronRight className="w-3 h-3 text-emerald-600" />
-                      </button>
-                    );
-                  })}
-                  {ALL_VILLAGES.filter(
-                    (v) =>
-                      v.villageName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                      v.shortName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                      String(v.villageNumber) === searchKeyword.trim()
-                  ).length === 0 && (
-                    <div className="text-xs text-slate-500 py-1">
-                      ไม่พบหมู่บ้านที่ตรงกับคำค้นหา กรุณาระบุชื่อหมู่บ้านหรือเลขที่หมู่ (1-28)
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 3 Zone Cards */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-sm font-bold text-slate-800">
-                    เลือกระดับเขตการปกครองเพื่อดูรายชื่อหมู่บ้าน (3 เขต)
-                  </h3>
-                </div>
-                <span className="text-xs text-slate-500">คลิกที่การ์ดเพื่อเจาะลึกระดับหมู่บ้าน</span>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+          
+          {/* LEFT 8/12: รายการแผนรายหมู่บ้าน (Table) */}
+          <div className="xl:col-span-8 space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+              
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>รายการแผนรายหมู่บ้าน</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-mono font-bold bg-slate-100 text-slate-600">
+                    {filteredVillages.length} หมู่บ้าน
+                  </span>
+                </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {zoneStats.map((item) => {
-                  const { zone } = item;
-                  return (
-                    <div
-                      key={zone.id}
-                      id={`card-zone-${zone.id}`}
-                      onClick={() => handleSelectZone(zone.id)}
-                      className="group bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer flex flex-col"
-                    >
-                      {/* Card Header Strip */}
-                      <div
-                        className="p-5 border-b border-slate-100 flex items-start justify-between relative"
-                        style={{ borderTop: `4px solid ${zone.color}` }}
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-xs font-bold px-2.5 py-0.5 rounded-md ${zone.badgeBg} ${zone.badgeText} border ${zone.badgeBorder}`}
-                            >
-                              {zone.name}
-                            </span>
-                            <span className="text-xs text-slate-400 font-mono">
-                              {item.totalVillages} หมู่บ้าน
-                            </span>
-                          </div>
-                          <h4 className="text-base font-bold text-slate-900 mt-1.5 group-hover:text-emerald-700 transition-colors">
-                            {zone.fullName}
-                          </h4>
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                            {zone.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Metrics Section */}
-                      <div className="p-5 flex-1 space-y-4 bg-slate-50/50">
-                        {/* 3 Primary Metric Pills */}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                            <div className="text-[11px] text-slate-500 font-medium">โครงการในแผน</div>
-                            <div className="text-base font-bold font-mono text-slate-900 mt-0.5">
-                              {item.totalProjects}
-                            </div>
-                          </div>
-                          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                            <div className="text-[11px] text-slate-500 font-medium">ตั้งงบแล้ว</div>
-                            <div className="text-base font-bold font-mono text-blue-700 mt-0.5">
-                              {item.budgetedCount}
-                            </div>
-                          </div>
-                          <div className="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                            <div className="text-[11px] text-slate-500 font-medium">งบประมาณรวม</div>
-                            <div className="text-sm font-bold font-mono text-emerald-700 mt-0.5 truncate" title={`฿${item.totalBudget.toLocaleString()}`}>
-                              ฿{item.totalBudget >= 1000000 ? `${(item.totalBudget / 1000000).toFixed(1)}M` : item.totalBudget.toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Status Breakdown Bar */}
-                        <div className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-semibold text-slate-700">ความก้าวหน้าโครงการที่ได้งบ</span>
-                            <span className="font-mono font-bold text-emerald-700">
-                              {item.completionRate}%
-                            </span>
-                          </div>
-
-                          {/* Multi-segmented Progress bar */}
-                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                            <div
-                              style={{
-                                width: `${
-                                  item.budgetedCount > 0
-                                    ? (item.completedCount / item.budgetedCount) * 100
-                                    : 0
-                                }%`
-                              }}
-                              className="bg-emerald-600 h-full transition-all"
-                              title={`ดำเนินการแล้วเสร็จ: ${item.completedCount}`}
-                            />
-                            <div
-                              style={{
-                                width: `${
-                                  item.budgetedCount > 0
-                                    ? (item.inProgressCount / item.budgetedCount) * 100
-                                    : 0
-                                }%`
-                              }}
-                              className="bg-sky-500 h-full transition-all"
-                              title={`อยู่ระหว่างดำเนินการ: ${item.inProgressCount}`}
-                            />
-                            <div
-                              style={{
-                                width: `${
-                                  item.budgetedCount > 0
-                                    ? (item.cancelledCount / item.budgetedCount) * 100
-                                    : 0
-                                }%`
-                              }}
-                              className="bg-rose-500 h-full transition-all"
-                              title={`ไม่ได้ดำเนินการ/โอนลด: ${item.cancelledCount}`}
-                            />
-                          </div>
-
-                          {/* Status Legend Pills */}
-                          <div className="grid grid-cols-2 gap-1 text-[11px] pt-1 text-slate-600">
-                            <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
-                              <span>✅</span> เสร็จสิ้น {item.completedCount}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-sky-700 font-medium">
-                              <span>⏳</span> กำลังทำ {item.inProgressCount}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-rose-700 font-medium">
-                              <span>🔴</span> โอนลด {item.cancelledCount}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-amber-700 font-medium">
-                              <span>🟡</span> รอตั้งงบ {item.unbudgetedCount}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Village Badges Sample */}
-                        <div>
-                          <div className="text-[11px] font-semibold text-slate-600 mb-1.5">
-                            รายชื่อหมู่บ้านในสังกัด ({zone.villages.length} หมู่):
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {zone.villages.slice(0, 6).map((v) => (
-                              <span
-                                key={v.villageNumber}
-                                className="text-[10px] px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-600"
-                              >
-                                ม.{v.villageNumber} {v.shortName}
-                              </span>
-                            ))}
-                            {zone.villages.length > 6 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                                + อีก {zone.villages.length - 6} หมู่
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Card Footer Button */}
-                      <div className="p-4 bg-white border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-emerald-700 group-hover:bg-emerald-50/50 transition-colors">
-                        <span>เข้าดูรายชื่อหมู่บ้านใน {zone.name}</span>
-                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Comparative Summary Table of All 3 Zones */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-sm font-bold text-slate-800">
-                    ตารางเปรียบเทียบสถิติการพัฒนา 3 เขตการปกครอง
-                  </h3>
-                </div>
-              </div>
-
+              {/* Responsive Table */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-[#0e533c] text-white font-semibold">
-                      <th className="py-2.5 px-3">เขตการปกครอง</th>
-                      <th className="py-2.5 px-3 text-center">หมู่บ้าน</th>
-                      <th className="py-2.5 px-3 text-center">โครงการในแผน</th>
-                      <th className="py-2.5 px-3 text-center">ตั้งงบแล้ว</th>
-                      <th className="py-2.5 px-3 text-right">งบประมาณรวม</th>
-                      <th className="py-2.5 px-3 text-center">แล้วเสร็จ (✅)</th>
-                      <th className="py-2.5 px-3 text-center">กำลังทำ (⏳)</th>
-                      <th className="py-2.5 px-3 text-center">โอนลด (🔴)</th>
-                      <th className="py-2.5 px-3 text-center">ยังไม่ตั้งงบ (🟡)</th>
-                      <th className="py-2.5 px-3 text-center">ก้าวหน้า</th>
-                      <th className="py-2.5 px-3 text-center">การดำเนินการ</th>
+                    <tr className="bg-slate-50/80 text-slate-600 border-b border-slate-200 font-bold">
+                      <th className="py-3 px-3.5 text-center w-12">ลำดับ</th>
+                      <th className="py-3 px-3.5 text-center w-24">รหัสหมู่บ้าน</th>
+                      <th className="py-3 px-4 min-w-[130px]">หมู่บ้าน</th>
+                      <th className="py-3 px-3.5 min-w-[120px]">ตำบล</th>
+                      <th className="py-3 px-3.5 min-w-[100px]">อำเภอ</th>
+                      <th className="py-3 px-3.5 text-center min-w-[120px]">สถานะ</th>
+                      <th className="py-3 px-3.5 text-center min-w-[100px]">ปีที่จัดทำ</th>
+                      <th className="py-3 px-3.5 text-center min-w-[120px]">จัดการ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {zoneStats.map((item) => (
-                      <tr key={item.zone.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-3 font-semibold text-slate-900 flex items-center gap-2">
-                          <span
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ backgroundColor: item.zone.color }}
-                          />
-                          <span>{item.zone.fullName}</span>
+                    {paginatedVillages.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                          ไม่พบข้อมูลหมู่บ้านที่ตรงกับเงื่อนไขการค้นหา
                         </td>
-                        <td className="py-3 px-3 text-center font-mono">{item.totalVillages} หมู่</td>
-                        <td className="py-3 px-3 text-center font-mono font-medium">
-                          {item.totalProjects}
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono font-bold text-blue-700">
-                          {item.budgetedCount}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700">
-                          ฿{item.totalBudget.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-mono">
-                            {item.completedCount}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-[11px] font-mono">
-                            {item.inProgressCount}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-mono">
-                            {item.cancelledCount}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="inline-block px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-mono">
-                            {item.unbudgetedCount}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="font-mono font-bold text-emerald-700 text-xs">
-                            {item.completionRate}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            onClick={() => handleSelectZone(item.zone.id)}
-                            className="px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] transition-colors cursor-pointer shadow-2xs"
+                      </tr>
+                    ) : (
+                      paginatedVillages.map((village, idx) => {
+                        const actualIdx = (currentPage - 1) * pageSize + idx + 1;
+                        return (
+                          <tr
+                            key={village.id}
+                            className="hover:bg-blue-50/30 transition-colors group"
                           >
-                            เลือกเขตนี้
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-200">
-                      <td className="py-2.5 px-3">รวมทั้งเทศบาลเมืองศิลา (3 เขต)</td>
-                      <td className="py-2.5 px-3 text-center font-mono">28 หมู่บ้าน</td>
-                      <td className="py-2.5 px-3 text-center font-mono">{totalFilteredProjects.toLocaleString()} โครงการ</td>
-                      <td className="py-2.5 px-3 text-center font-mono text-blue-700">
-                        {zoneStats.reduce((s, z) => s + z.budgetedCount, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-emerald-800">
-                        ฿{totalFilteredBudget.toLocaleString()}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-emerald-700">
-                        {zoneStats.reduce((s, z) => s + z.completedCount, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-sky-700">
-                        {zoneStats.reduce((s, z) => s + z.inProgressCount, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-rose-700">
-                        {zoneStats.reduce((s, z) => s + z.cancelledCount, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-amber-800">
-                        {zoneStats.reduce((s, z) => s + z.unbudgetedCount, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-emerald-700">
-                        {(() => {
-                          const totalBudgeted = zoneStats.reduce((s, z) => s + z.budgetedCount, 0);
-                          const totalCompleted = zoneStats.reduce((s, z) => s + z.completedCount, 0);
-                          return totalBudgeted > 0 ? `${Math.round((totalCompleted / totalBudgeted) * 100)}%` : '0%';
-                        })()}
-                      </td>
-                      <td className="py-2.5 px-3 text-center">-</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
+                            {/* ลำดับ */}
+                            <td className="py-3 px-3.5 text-center font-mono text-slate-500">
+                              {actualIdx}
+                            </td>
 
-        {/* ========================================================================= */}
-        {/* LEVEL 2: ระดับหมู่บ้านในเขต (รายการหมู่บ้านในเขตที่เลือก) */}
-        {/* ========================================================================= */}
-        {currentLevel === 2 && activeZone && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Zone Header Banner */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
-                  style={{ backgroundColor: activeZone.color }}
-                >
-                  <Building2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${activeZone.badgeBg} ${activeZone.badgeText}`}>
-                      {activeZone.name}
-                    </span>
-                    <span className="text-xs text-slate-500 font-mono">
-                      {activeZone.villages.length} หมู่บ้านในเขตนี้
-                    </span>
-                  </div>
-                  <h2 className="text-lg font-bold text-slate-900 mt-1">
-                    {activeZone.fullName}
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">{activeZone.description}</p>
-                </div>
-              </div>
+                            {/* รหัสหมู่บ้าน */}
+                            <td className="py-3 px-3.5 text-center font-mono font-bold text-slate-800">
+                              {village.code}
+                            </td>
 
-              {/* Zone Quick Stats */}
-              <div className="flex items-center gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-100 shrink-0">
-                <div>
-                  <div className="text-[11px] text-slate-500">โครงการทั้งเขต</div>
-                  <div className="text-base font-bold font-mono text-slate-900">
-                    {villageStatsInActiveZone.reduce((s, v) => s + v.totalProjects, 0)} รายการ
-                  </div>
-                </div>
-                <div className="w-px h-8 bg-slate-200" />
-                <div>
-                  <div className="text-[11px] text-slate-500">งบประมาณรวมทั้งเขต</div>
-                  <div className="text-base font-bold font-mono text-emerald-700">
-                    ฿{villageStatsInActiveZone.reduce((s, v) => s + v.totalBudget, 0).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Filter and View Controls */}
-            <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              {/* Search Bar */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  id="input-search-village"
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="ค้นหาหมู่บ้าน (ชื่อหมู่บ้าน หรือ เลขที่หมู่)..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-emerald-500 focus:bg-white transition-all"
-                />
-              </div>
-
-              {/* View Mode & Reset */}
-              <div className="flex items-center gap-2">
-                {searchKeyword && (
-                  <button
-                    onClick={() => setSearchKeyword('')}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>ล้างค้นหา</span>
-                  </button>
-                )}
-
-                <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-100 text-xs">
-                  <button
-                    onClick={() => setViewMode('cards')}
-                    className={`px-3 py-1 rounded-md transition-colors cursor-pointer font-medium ${
-                      viewMode === 'cards'
-                        ? 'bg-white text-slate-900 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    การ์ด (Grid)
-                  </button>
-                  <button
-                    onClick={() => setViewMode('table')}
-                    className={`px-3 py-1 rounded-md transition-colors cursor-pointer font-medium ${
-                      viewMode === 'table'
-                        ? 'bg-white text-slate-900 shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    ตาราง (Table)
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* List of Villages in Selected Zone */}
-            {filteredVillages.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                  <Search className="w-6 h-6" />
-                </div>
-                <div className="text-slate-800 font-bold text-sm">
-                  ไม่พบหมู่บ้านที่ตรงกับคำค้นหา "{searchKeyword}" ใน {activeZone.name}
-                </div>
-                <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  กรุณาลองค้นหาด้วยชื่อหมู่บ้าน หรือเลขที่หมู่ใหม่อีกครั้ง หรือกดปุ่มด้านล่างเพื่อแสดงรายการทั้งหมด
-                </p>
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setSearchKeyword('')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg cursor-pointer transition-colors shadow-2xs"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>ล้างการค้นหา / แสดงทุกหมู่บ้านในเขตนี้ ({activeZone.villages.length} หมู่บ้าน)</span>
-                  </button>
-                </div>
-              </div>
-            ) : viewMode === 'cards' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredVillages.map((item) => {
-                  const { village } = item;
-                  return (
-                    <div
-                      key={village.villageNumber}
-                      id={`card-village-${village.villageNumber}`}
-                      onClick={() => handleSelectVillage(village.villageNumber)}
-                      className="group bg-white rounded-xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition-all duration-150 p-4 cursor-pointer flex flex-col justify-between"
-                    >
-                      <div>
-                        {/* Header */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200 mb-1">
-                              หมู่ที่ {village.villageNumber}
-                            </div>
-                            <h4 className="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors">
+                            {/* หมู่บ้าน */}
+                            <td className="py-3 px-4 font-bold text-slate-900">
                               {village.villageName}
-                            </h4>
-                          </div>
-                          <span className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-emerald-100 text-slate-600 group-hover:text-emerald-700 flex items-center justify-center transition-colors shrink-0">
-                            <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                          </span>
-                        </div>
+                            </td>
 
-                        {/* Stats Metrics */}
-                        <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-3 gap-1.5 text-xs">
-                          <div>
-                            <span className="text-[10px] text-slate-400 block">ในแผน</span>
-                            <span className="font-bold font-mono text-slate-800 text-xs">
-                              {item.totalProjects}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 block">ตั้งงบ</span>
-                            <span className="font-bold font-mono text-blue-700 text-xs">
-                              {item.budgetedCount}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 block">งบประมาณ</span>
-                            <span className="font-bold font-mono text-emerald-700 text-xs truncate block" title={`฿${item.totalBudget.toLocaleString()}`}>
-                              ฿{item.totalBudget >= 1000000 ? `${(item.totalBudget / 1000000).toFixed(1)}M` : item.totalBudget.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
+                            {/* ตำบล */}
+                            <td className="py-3 px-3.5 text-slate-600">
+                              {village.subdistrict}
+                            </td>
 
-                        {/* Progress Bar for Budgeted Projects */}
-                        <div className="mt-2.5">
-                          <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
-                            <span>ความก้าวหน้าโครงการ</span>
-                            <span className="font-mono font-bold text-emerald-700">{item.completionRate}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                            <div
-                              style={{
-                                width: `${item.budgetedCount > 0 ? (item.completedCount / item.budgetedCount) * 100 : 0}%`
-                              }}
-                              className="bg-emerald-600 h-full"
-                              title={`เสร็จสิ้น: ${item.completedCount}`}
-                            />
-                            <div
-                              style={{
-                                width: `${item.budgetedCount > 0 ? (item.inProgressCount / item.budgetedCount) * 100 : 0}%`
-                              }}
-                              className="bg-sky-500 h-full"
-                              title={`กำลังดำเนิน: ${item.inProgressCount}`}
-                            />
-                            <div
-                              style={{
-                                width: `${item.budgetedCount > 0 ? (item.cancelledCount / item.budgetedCount) * 100 : 0}%`
-                              }}
-                              className="bg-rose-500 h-full"
-                              title={`โอนลด: ${item.cancelledCount}`}
-                            />
-                          </div>
-                        </div>
+                            {/* อำเภอ */}
+                            <td className="py-3 px-3.5 text-slate-600">
+                              {village.district}
+                            </td>
 
-                        {/* Status Distribution Pills */}
-                        <div className="mt-3 bg-slate-50 rounded-lg p-2 grid grid-cols-4 gap-1 text-[10px] text-center">
-                          <span className="text-emerald-700 font-medium" title="เสร็จสิ้นแล้ว">
-                            ✅ {item.completedCount}
-                          </span>
-                          <span className="text-sky-700 font-medium" title="กำลังดำเนินการ">
-                            ⏳ {item.inProgressCount}
-                          </span>
-                          <span className="text-rose-700 font-medium" title="ไม่ได้ดำเนินการ/โอนลด">
-                            🔴 {item.cancelledCount}
-                          </span>
-                          <span className="text-amber-700 font-medium" title="อยู่ในแผน (ยังไม่ตั้งงบ)">
-                            🟡 {item.unbudgetedCount}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Footer Link */}
-                      <div className="mt-3 pt-2 text-right">
-                        <span className="text-[11px] font-semibold text-emerald-700 group-hover:underline inline-flex items-center gap-1">
-                          <span>ดูโครงการในหมู่บ้านนี้</span>
-                          <span>→</span>
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* Table View for Villages in Selected Zone */
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-[#0e533c] text-white font-semibold">
-                      <th className="py-2.5 px-3 text-center w-16">หมู่ที่</th>
-                      <th className="py-2.5 px-3">ชื่อหมู่บ้าน</th>
-                      <th className="py-2.5 px-3 text-center w-20">ในแผน</th>
-                      <th className="py-2.5 px-3 text-center w-20">ตั้งงบแล้ว</th>
-                      <th className="py-2.5 px-3 text-center w-20">แล้วเสร็จ (✅)</th>
-                      <th className="py-2.5 px-3 text-center w-20">กำลังทำ (⏳)</th>
-                      <th className="py-2.5 px-3 text-center w-20">โอนลด (🔴)</th>
-                      <th className="py-2.5 px-3 text-center w-20">รอตั้งงบ (🟡)</th>
-                      <th className="py-2.5 px-3 text-right w-28">งบประมาณรวม</th>
-                      <th className="py-2.5 px-3 text-center w-20">ก้าวหน้า</th>
-                      <th className="py-2.5 px-3 text-center w-20">การกระทำ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {filteredVillages.map((item) => {
-                      const { village } = item;
-                      return (
-                        <tr
-                          key={village.villageNumber}
-                          onClick={() => handleSelectVillage(village.villageNumber)}
-                          className="hover:bg-emerald-50/40 cursor-pointer transition-colors"
-                        >
-                          <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800">
-                            {village.villageNumber}
-                          </td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-900">
-                            {village.villageName}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-mono font-medium">
-                            {item.totalProjects}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-mono font-bold text-blue-700">
-                            {item.budgetedCount}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className="px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[11px]">
-                              {item.completedCount}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className="px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-700 font-mono text-[11px]">
-                              {item.inProgressCount}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className="px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-700 font-mono text-[11px]">
-                              {item.cancelledCount}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className="px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-mono text-[11px]">
-                              {item.unbudgetedCount}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
-                            ฿{item.totalBudget.toLocaleString()}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-mono font-bold text-emerald-700">
-                            {item.completionRate}%
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className="text-emerald-700 hover:text-emerald-900 font-semibold underline text-[11px]">
-                              เปิดดู
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* LEVEL 3: ระดับโครงการรายหมู่บ้าน (ตารางรายการโครงการของหมู่บ้านที่เลือก) */}
-        {/* ========================================================================= */}
-        {currentLevel === 3 && activeVillage && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Village Profile Banner */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-                  <MapPin className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      {activeZone?.name || 'เขตการปกครอง'}
-                    </span>
-                    <span className="text-xs text-slate-500 font-mono">
-                      หมู่ที่ {activeVillage.villageNumber}
-                    </span>
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-900 mt-1">
-                    {activeVillage.villageName}
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    รายการโครงการแผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) ประจำพื้นที่ {activeVillage.villageName}
-                  </p>
-                </div>
-              </div>
-
-              {/* Village Quick Stats */}
-              <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 shrink-0">
-                <div>
-                  <div className="text-[10px] text-slate-500">ในแผน / ตั้งงบ</div>
-                  <div className="text-sm font-bold font-mono text-slate-900">
-                    {activeVillageStats?.totalProjects || villageProjects.length}{' '}
-                    <span className="text-[10px] text-blue-700 font-semibold">
-                      (ตั้งงบ {activeVillageStats?.budgetedCount || 0})
-                    </span>
-                  </div>
-                </div>
-                <div className="w-px h-7 bg-slate-200" />
-                <div>
-                  <div className="text-[10px] text-slate-500">งบประมาณรวม</div>
-                  <div className="text-sm font-bold font-mono text-emerald-700">
-                    ฿{(activeVillageStats?.totalBudget || 0).toLocaleString()}
-                  </div>
-                </div>
-                <div className="w-px h-7 bg-slate-200" />
-                <div>
-                  <div className="text-[10px] text-slate-500 flex items-center justify-between gap-2">
-                    <span>ความก้าวหน้าโครงการ</span>
-                    <span className="font-mono font-bold text-emerald-700">
-                      {activeVillageStats?.completionRate || 0}%
-                    </span>
-                  </div>
-                  <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden flex mt-1">
-                    <div
-                      style={{
-                        width: `${
-                          activeVillageStats && activeVillageStats.budgetedCount > 0
-                            ? (activeVillageStats.completedCount / activeVillageStats.budgetedCount) * 100
-                            : 0
-                        }%`
-                      }}
-                      className="bg-emerald-600 h-full"
-                      title={`เสร็จสิ้น: ${activeVillageStats?.completedCount || 0}`}
-                    />
-                    <div
-                      style={{
-                        width: `${
-                          activeVillageStats && activeVillageStats.budgetedCount > 0
-                            ? (activeVillageStats.inProgressCount / activeVillageStats.budgetedCount) * 100
-                            : 0
-                        }%`
-                      }}
-                      className="bg-sky-500 h-full"
-                      title={`กำลังดำเนิน: ${activeVillageStats?.inProgressCount || 0}`}
-                    />
-                    <div
-                      style={{
-                        width: `${
-                          activeVillageStats && activeVillageStats.budgetedCount > 0
-                            ? (activeVillageStats.cancelledCount / activeVillageStats.budgetedCount) * 100
-                            : 0
-                        }%`
-                      }}
-                      className="bg-rose-500 h-full"
-                      title={`โอนลด: ${activeVillageStats?.cancelledCount || 0}`}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-[9px] text-slate-500 mt-1 font-mono">
-                    <span className="text-emerald-700">✅ {activeVillageStats?.completedCount || 0}</span>
-                    <span className="text-sky-700">⏳ {activeVillageStats?.inProgressCount || 0}</span>
-                    <span className="text-rose-700">🔴 {activeVillageStats?.cancelledCount || 0}</span>
-                    <span className="text-amber-700">🟡 {activeVillageStats?.unbudgetedCount || 0}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Filter Bar */}
-            <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              {/* Search */}
-              <div className="relative flex-1 max-w-sm">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  id="input-search-village-project"
-                  type="text"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  placeholder="ค้นหาชื่อโครงการ, แผนงาน หรือหน่วยงาน..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-emerald-500 focus:bg-white transition-all"
-                />
-              </div>
-
-              {/* Status & Year & Village Dropdowns */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 text-xs">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-slate-500 text-[11px] whitespace-nowrap">สลับหมู่บ้าน:</span>
-                  <select
-                    value={activeVillage.villageNumber}
-                    onChange={(e) => {
-                      const vNum = Number(e.target.value);
-                      const targetV = ALL_VILLAGES.find((v) => v.villageNumber === vNum);
-                      if (targetV) {
-                        const targetZ = SILA_ZONES.find((z) => z.name === targetV.zone);
-                        if (targetZ) setSelectedZoneId(targetZ.id);
-                        handleSelectVillage(vNum);
-                      }
-                    }}
-                    className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 font-medium focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer max-w-[160px] truncate"
-                  >
-                    {SILA_ZONES.map((zone) => (
-                      <optgroup key={zone.id} label={zone.name}>
-                        {zone.villages.map((v) => (
-                          <option key={v.villageNumber} value={v.villageNumber}>
-                            {v.villageName}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Status Filter Buttons (Requirement 4: Budget & Execution Status) */}
-                <div className="inline-flex flex-wrap rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setBudgetStatusFilter('all')}
-                    className={`px-3 py-1.5 rounded-lg transition-all font-bold cursor-pointer text-sm min-h-[38px] ${
-                      budgetStatusFilter === 'all'
-                        ? 'bg-white text-slate-900 shadow-2xs'
-                        : 'text-slate-700 hover:text-slate-950'
-                    }`}
-                  >
-                    ทั้งหมด
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBudgetStatusFilter('unbudgeted')}
-                    className={`px-3 py-1.5 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 text-sm min-h-[38px] ${
-                      budgetStatusFilter === 'unbudgeted'
-                        ? 'bg-amber-500 text-white shadow-2xs'
-                        : 'text-amber-800 hover:text-amber-950'
-                    }`}
-                  >
-                    <span>🟡 ยังไม่ตั้งงบ</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBudgetStatusFilter('budgeted')}
-                    className={`px-3 py-1.5 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 text-sm min-h-[38px] ${
-                      budgetStatusFilter === 'budgeted'
-                        ? 'bg-blue-600 text-white shadow-2xs'
-                        : 'text-blue-800 hover:text-blue-950'
-                    }`}
-                  >
-                    <span>🔵 ตั้งงบแล้ว</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBudgetStatusFilter('in_progress')}
-                    className={`px-3 py-1.5 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 text-sm min-h-[38px] ${
-                      budgetStatusFilter === 'in_progress'
-                        ? 'bg-sky-600 text-white shadow-2xs'
-                        : 'text-sky-800 hover:text-sky-950'
-                    }`}
-                  >
-                    <span>⏳ กำลังทำ</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBudgetStatusFilter('completed')}
-                    className={`px-3 py-1.5 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 text-sm min-h-[38px] ${
-                      budgetStatusFilter === 'completed'
-                        ? 'bg-emerald-700 text-white shadow-2xs'
-                        : 'text-emerald-800 hover:text-emerald-950'
-                    }`}
-                  >
-                    <span>✅ เสร็จสิ้น</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBudgetStatusFilter('cancelled')}
-                    className={`px-3 py-1.5 rounded-lg transition-all font-bold cursor-pointer flex items-center gap-1 text-sm min-h-[38px] ${
-                      budgetStatusFilter === 'cancelled'
-                        ? 'bg-rose-600 text-white shadow-2xs'
-                        : 'text-rose-800 hover:text-rose-950'
-                    }`}
-                  >
-                    <span>🔴 โอนลด</span>
-                  </button>
-                </div>
-
-                <select
-                  id="select-year-filter"
-                  value={yearFilter}
-                  onChange={(e) => setYearFilter(e.target.value)}
-                  className="text-sm font-bold bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 min-h-[40px] text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                >
-                  <option value="all">ทุกปี พ.ศ.</option>
-                  <option value="2571">พ.ศ. 2571</option>
-                  <option value="2572">พ.ศ. 2572</option>
-                  <option value="2573">พ.ศ. 2573</option>
-                  <option value="2574">พ.ศ. 2574</option>
-                  <option value="2575">พ.ศ. 2575</option>
-                </select>
-
-                {(searchKeyword || budgetStatusFilter !== 'all' || yearFilter !== 'all') && (
-                  <button
-                    onClick={() => {
-                      setSearchKeyword('');
-                      setBudgetStatusFilter('all');
-                      setYearFilter('all');
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer min-h-[40px]"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>ล้างตัวกรอง</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Project Table (reusing identical layout and styles from Dashboard/Recent Projects) */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between">
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-lg">
-                    ตารางโครงการใน {activeVillage.villageName}
-                  </h3>
-                  <p className="text-base text-slate-600 mt-1">
-                    คลิกที่แถวโครงการเพื่อดูรายละเอียด ฉบับแผน และการจัดสรรงบประมาณ
-                  </p>
-                </div>
-                <span className="text-sm font-mono font-bold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200">
-                  พบ {villageProjects.length} รายการ
-                </span>
-              </div>
-
-              {villageProjects.length === 0 ? (
-                <div className="py-12 px-4 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div className="text-slate-900 font-bold text-base">
-                    {searchKeyword || budgetStatusFilter !== 'all' || yearFilter !== 'all'
-                      ? 'ไม่พบรายการโครงการตามตัวกรองที่กำหนด'
-                      : `ยังไม่มีรายการโครงการที่ระบุพื้นที่ใน ${activeVillage.villageName}`}
-                  </div>
-                  <p className="text-sm text-slate-600 max-w-md mx-auto">
-                    {searchKeyword || budgetStatusFilter !== 'all' || yearFilter !== 'all'
-                      ? 'ลองล้างคำค้นหาหรือตัวกรองสถานะ/ปีงบประมาณเพื่อดูโครงการทั้งหมดของหมู่บ้านนี้'
-                      : 'ท่านสามารถเพิ่มโครงการใหม่ผ่านแบบ ผ.02 สำหรับหมู่บ้านนี้ หรือกลับไปดูโครงการทั้งหมดในเขต'}
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
-                    {(searchKeyword || budgetStatusFilter !== 'all' || yearFilter !== 'all') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchKeyword('');
-                          setBudgetStatusFilter('all');
-                          setYearFilter('all');
-                        }}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white text-base font-bold rounded-xl cursor-pointer transition-colors shadow-2xs"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        <span>ล้างตัวกรองทั้งหมด</span>
-                      </button>
-                    )}
-                    {onAddNewProject && (
-                      <button
-                        type="button"
-                        onClick={() => onAddNewProject(activeVillage.villageNumber)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-base font-bold rounded-xl cursor-pointer transition-colors shadow-2xs"
-                      >
-                        <span>+ เพิ่มโครงการสำหรับหมู่บ้านนี้ (ผ.02)</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleGoToLevel2}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-base font-bold rounded-xl cursor-pointer transition-colors"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>ดูโครงการทั้งหมดใน {activeZone?.name}</span>
-                    </button>
-                    {onRestoreInitialData && (!projects || projects.length === 0) && (
-                      <button
-                        type="button"
-                        onClick={onRestoreInitialData}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-300 hover:bg-amber-100 text-amber-900 text-base font-bold rounded-xl cursor-pointer transition-colors"
-                      >
-                        <RotateCcw className="w-4 h-4 text-amber-700" />
-                        <span>กู้คืนชุดข้อมูลดั้งเดิม (28 หมู่บ้าน)</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="overflow-auto max-h-[65vh]">
-                  <table className="table-fixed w-full text-left text-base border-collapse">
-                    <thead>
-                      <tr className="bg-[#005242] text-white font-bold sticky top-0 z-10">
-                        <th className="py-3.5 px-3 w-14 text-center text-emerald-100 font-bold border-r border-[#003d31] text-base">
-                          ที่
-                        </th>
-                        <th className="py-3.5 px-3 w-24 text-center font-bold border-r border-[#003d31] text-base">
-                          ประเภท
-                        </th>
-                        <th className="py-3.5 px-3 w-[16%] font-bold text-base border-r border-[#003d31]">ประเด็นการพัฒนา</th>
-                        <th className="py-3.5 px-3 w-[14%] font-bold text-base border-r border-[#003d31]">แผนงาน</th>
-                        <th className="py-3.5 px-3 w-[26%] font-bold text-base border-r border-[#003d31]">ชื่อโครงการ / รายละเอียดเป้าหมาย</th>
-                        <th className="py-3.5 px-3 w-[12%] text-center font-bold text-base border-r border-[#003d31]">หน่วยงาน</th>
-                        <th className="py-3.5 px-3 w-[13%] text-right font-bold text-base border-r border-[#003d31]">งบประมาณ</th>
-                        <th className="py-3.5 px-3 w-48 text-center font-bold text-base">สถานะการดำเนินงาน</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 text-slate-800">
-                      {villageProjects.map((p, idx) => (
-                        <tr
-                          key={p.id}
-                          id={`row-village-project-${p.id}`}
-                          onClick={() => onViewProjectDetail(p)}
-                          className="hover:bg-emerald-50/50 cursor-pointer transition-colors border-b border-slate-200 last:border-b-0"
-                        >
-                          {/* 1. ที่ (ลำดับ 1, 2, 3...) */}
-                          <td className="py-3 px-3 w-14 text-center font-mono font-bold text-slate-700 whitespace-nowrap bg-slate-50/70 border-r border-slate-200 text-base">
-                            {idx + 1}
-                          </td>
-
-                          {/* 2. ประเภท */}
-                          <td className="py-3 px-3 w-24 text-center whitespace-nowrap border-r border-slate-200">
-                            <span
-                              className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold ${
-                                p.edition === 'first'
-                                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                                  : p.edition === 'additional'
-                                  ? 'bg-sky-100 text-sky-900 border border-sky-300'
-                                  : p.edition === 'changed'
-                                  ? 'bg-[#f3e8ff] text-[#6b21a8] border border-[#d8b4fe]'
-                                  : 'bg-[#fef9c3] text-[#854d0e] border border-[#fde047]'
-                              }`}
-                            >
-                              {p.edition === 'first'
-                                ? 'ฉบับแรก'
-                                : p.edition === 'additional'
-                                ? 'เพิ่มเติม'
-                                : p.edition === 'changed'
-                                ? 'เปลี่ยนแปลง'
-                                : 'แก้ไข'}
-                            </span>
-                          </td>
-
-                          {/* 3. ประเด็นการพัฒนา */}
-                          <td className="py-3 px-3 text-slate-800 border-r border-slate-100 text-base leading-relaxed truncate" title={p.planStrategy}>
-                            {p.planStrategy || '-'}
-                          </td>
-
-                          {/* 4. แผนงาน */}
-                          <td className="py-3 px-3 text-slate-800 border-r border-slate-100 text-base leading-relaxed truncate" title={p.planCategory}>
-                            {p.planCategory || '-'}
-                          </td>
-
-                          {/* 5. ชื่อโครงการ / รายละเอียดเป้าหมาย */}
-                          <td className="py-3 px-3 font-medium text-slate-900 border-r border-slate-100">
-                            <div className="font-bold text-slate-950 text-base leading-snug truncate" title={p.name}>{p.name}</div>
-                            {p.target && (
-                              <div className="text-sm text-slate-600 font-normal leading-normal truncate mt-1" title={`เป้าหมาย: ${p.target}`}>
-                                เป้าหมาย: {p.target}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* 6. หน่วยงานรับผิดชอบ */}
-                          <td className="py-3 px-3 text-center text-slate-800 border-r border-slate-100 text-base truncate" title={p.department}>
-                            {p.department || '-'}
-                          </td>
-
-                          {/* 7. งบประมาณ */}
-                          <td className="py-3 px-3 text-right font-mono font-bold text-emerald-800 border-r border-slate-100 whitespace-nowrap text-base sm:text-[17px]">
-                            ฿{getProjectBudget(p).toLocaleString()}
-                          </td>
-
-                          {/* 8. สถานะการตั้งงบประมาณ & การดำเนินงานโครงการ (Requirement 4) */}
-                          <td className="py-3 px-3 w-48 text-center whitespace-nowrap">
-                            {isProjectBudgetAllocated(p) ? (
-                              <div className="flex flex-col items-center gap-1.5">
-                                <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-blue-100 text-blue-900 border border-blue-300">
-                                    ตั้งงบแล้ว
-                                  </span>
-                                  {(() => {
-                                    const execSt = getExecutionStatus(p);
-                                    const conf = EXECUTION_STATUS_CONFIG[execSt];
-                                    return (
-                                      <span
-                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold border ${conf.bgClass} ${conf.textClass} ${conf.borderClass}`}
-                                        title={conf.description}
-                                      >
-                                        <span>{conf.icon}</span>
-                                        <span>{conf.shortLabel}</span>
-                                      </span>
-                                    );
-                                  })()}
-                                </div>
-
-                                {p.executionProgressNote && (
-                                  <div className="text-xs text-slate-600 truncate max-w-[170px]" title={p.executionProgressNote}>
-                                    "{p.executionProgressNote}"
-                                  </div>
-                                )}
-
-                                {canUserUpdateExecutionStatus(currentUser, p) && (
-                                  <div className="flex items-center gap-1.5 mt-1">
-                                    <select
-                                      value={getExecutionStatus(p)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onChange={(e) => {
-                                        e.stopPropagation();
-                                        const newStatus = e.target.value as ProjectExecutionStatus;
-                                        if (onUpdateProject) {
-                                          onUpdateProject(
-                                            updateProjectExecutionStatus(
-                                              p,
-                                              newStatus,
-                                              p.executionProgressNote,
-                                              currentUser?.fullName || currentUser?.username
-                                            )
-                                          );
-                                        }
-                                      }}
-                                      className="text-xs bg-white border border-slate-300 rounded-lg px-2 py-1 text-slate-800 font-bold focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs"
-                                      title="อัปเดตสถานะการดำเนินงานจริง"
-                                    >
-                                      <option value="in_progress">⏳ กำลังดำเนิน</option>
-                                      <option value="completed">✅ เสร็จสิ้น</option>
-                                      <option value="cancelled">🔴 โอนลด</option>
-                                    </select>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (onUpdateProject) {
-                                          onUpdateProject(toggleProjectBudgetAllocation(p));
-                                        }
-                                      }}
-                                      className="text-xs text-slate-500 hover:text-amber-800 underline font-semibold cursor-pointer"
-                                      title="คลิกเพื่อสลับกลับเป็นยังไม่ตั้งงบ"
-                                    >
-                                      คืนสถานะ
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex flex-col items-center gap-1">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-950 border border-amber-300">
-                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                  <span>อยู่ในแผน (ยังไม่ตั้งงบ)</span>
+                            {/* สถานะ (Exact 3 status pill styles) */}
+                            <td className="py-3 px-3.5 text-center">
+                              {village.status === 'has_plan' && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <Check className="w-3 h-3 stroke-[2.5]" />
+                                  <span>มีแผนแล้ว</span>
                                 </span>
-                                {canUpdateStatus && (
+                              )}
+                              {village.status === 'in_progress' && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                  <span>อยู่ระหว่างจัดทำ</span>
+                                </span>
+                              )}
+                              {village.status === 'no_plan' && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                  <span>ยังไม่จัดทำ</span>
+                                </span>
+                              )}
+                            </td>
+
+                            {/* ปีที่จัดทำ */}
+                            <td className="py-3 px-3.5 text-center font-mono text-slate-600">
+                              {village.planYears}
+                            </td>
+
+                            {/* จัดการ (ดูรายละเอียด + 3 dots menu) */}
+                            <td className="py-3 px-3.5 text-center relative">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedVillageDetail(village)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs transition-colors cursor-pointer"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>ดูรายละเอียด</span>
+                                </button>
+                                
+                                <div className="relative">
                                   <button
                                     type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (onUpdateProject) {
-                                        onUpdateProject(toggleProjectBudgetAllocation(p));
-                                      }
-                                    }}
-                                    className="text-xs text-emerald-800 hover:text-emerald-950 font-bold underline cursor-pointer"
-                                    title="คลิกเพื่อนำไปตั้งงบประมาณ"
+                                    onClick={() =>
+                                      setOpenActionDropdownId(
+                                        openActionDropdownId === village.id ? null : village.id
+                                      )
+                                    }
+                                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                    title="เมนูเพิ่มเติม"
                                   >
-                                    + นำไปตั้งงบประมาณ
+                                    <MoreVertical className="w-4 h-4" />
                                   </button>
-                                )}
+
+                                  {/* Dropdown Menu */}
+                                  {openActionDropdownId === village.id && (
+                                    <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-30 text-left text-xs animate-in fade-in zoom-in-95 duration-150">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedVillageDetail(village);
+                                          setOpenActionDropdownId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-medium"
+                                      >
+                                        <Layers className="w-3.5 h-3.5 text-blue-600" />
+                                        <span>ดูโครงการในหมู่บ้าน</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          onAddNewProject?.(parseInt(village.code, 10));
+                                          setOpenActionDropdownId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-medium"
+                                      >
+                                        <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>เพิ่มโครงการลงในแผน</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleDownloadExcel();
+                                          setOpenActionDropdownId(null);
+                                        }}
+                                        className="w-full px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2 font-medium"
+                                      >
+                                        <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" />
+                                        <span>ส่งออกสรุปข้อมูล</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Footer */}
+              <div className="px-5 py-3.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
+                <div>
+                  แสดง {(currentPage - 1) * pageSize + 1} –{' '}
+                  {Math.min(currentPage * pageSize, filteredVillages.length)} จาก{' '}
+                  {filteredVillages.length} รายการ
                 </div>
-              )}
+                <div className="flex items-center gap-1 self-center sm:self-auto">
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    title="หน้าก่อนหน้า"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-slate-600" />
+                  </button>
+
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    title="หน้าถัดไป"
+                  >
+                    <ChevronRight className="w-4 h-4 text-slate-600" />
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
-        )}
-      </main>
+
+          {/* RIGHT 4/12: 3 Cards (Map + Donut Summary + Related Documents) */}
+          <div className="xl:col-span-4 space-y-4">
+            
+            {/* Widget 1: แผนที่แสดงที่ตั้งหมู่บ้าน */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                แผนที่แสดงที่ตั้งหมู่บ้าน
+              </h3>
+
+              {/* Map Canvas Box with Styled SVG Map */}
+              <div className="relative w-full h-56 rounded-xl overflow-hidden border border-slate-200 bg-[#e2f1e8] shadow-inner select-none">
+                {/* SVG Geography / Water reservoir and roads */}
+                <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#bfdbfe" />
+                      <stop offset="100%" stopColor="#93c5fd" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Water Body (Lake / River curve) */}
+                  <path
+                    d="M-20,180 Q100,120 180,140 T320,130 Q380,160 420,110 L420,240 L-20,240 Z"
+                    fill="url(#waterGrad)"
+                    opacity="0.85"
+                  />
+                  <path
+                    d="M120,0 Q160,80 180,140 Q200,200 240,240"
+                    stroke="#93c5fd"
+                    strokeWidth="14"
+                    fill="none"
+                    opacity="0.6"
+                  />
+
+                  {/* Roads network */}
+                  <path d="M0,80 Q150,100 240,60 T420,90" stroke="#ffffff" strokeWidth="4" fill="none" />
+                  <path d="M80,0 Q120,110 200,160 T350,240" stroke="#ffffff" strokeWidth="3" fill="none" />
+                  <path d="M240,60 L380,180" stroke="#fef08a" strokeWidth="2.5" strokeDasharray="4 2" fill="none" />
+                </svg>
+
+                {/* Map Pins Matching image.png */}
+                {/* Pin 1: หมู่ 06 บ้านเขาพระ (Green) */}
+                <div
+                  onClick={() => {
+                    const v = villagePlans.find((x) => x.code === '06');
+                    if (v) setSelectedVillageDetail(v);
+                  }}
+                  className="absolute top-5 left-1/4 -translate-x-1/2 cursor-pointer group flex items-center gap-1 z-10"
+                >
+                  <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md ring-2 ring-white">
+                    <MapPin className="w-3.5 h-3.5 fill-white" />
+                  </div>
+                  <div className="bg-white/95 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
+                    หมู่ 06 บ้านเขาพระ
+                  </div>
+                </div>
+
+                {/* Pin 2: หมู่ 03 บ้านทุ่งสว่าง (Yellow) */}
+                <div
+                  onClick={() => {
+                    const v = villagePlans.find((x) => x.code === '03');
+                    if (v) setSelectedVillageDetail(v);
+                  }}
+                  className="absolute top-20 right-6 cursor-pointer group flex items-center gap-1 z-10"
+                >
+                  <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md ring-2 ring-white">
+                    <MapPin className="w-3.5 h-3.5 fill-white" />
+                  </div>
+                  <div className="bg-white/95 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
+                    หมู่ 03 บ้านทุ่งสว่าง
+                  </div>
+                </div>
+
+                {/* Pin 3: หมู่ 01 บ้านหนองบัว (Blue) */}
+                <div
+                  onClick={() => {
+                    const v = villagePlans.find((x) => x.code === '01');
+                    if (v) setSelectedVillageDetail(v);
+                  }}
+                  className="absolute bottom-12 left-16 cursor-pointer group flex items-center gap-1 z-10"
+                >
+                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md ring-2 ring-white">
+                    <MapPin className="w-3.5 h-3.5 fill-white" />
+                  </div>
+                  <div className="bg-white/95 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
+                    หมู่ 01 บ้านหนองบัว
+                  </div>
+                </div>
+
+                {/* Pin 4: หมู่ 10 บ้านน้ำใส (Red) */}
+                <div
+                  onClick={() => {
+                    const v = villagePlans.find((x) => x.code === '10');
+                    if (v) setSelectedVillageDetail(v);
+                  }}
+                  className="absolute bottom-5 right-8 cursor-pointer group flex items-center gap-1 z-10"
+                >
+                  <div className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-md ring-2 ring-white">
+                    <MapPin className="w-3.5 h-3.5 fill-white" />
+                  </div>
+                  <div className="bg-white/95 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-800 shadow-xs border border-slate-200 whitespace-nowrap">
+                    หมู่ 10 บ้านน้ำใส
+                  </div>
+                </div>
+
+                {/* Zoom Controls */}
+                <div className="absolute bottom-2 left-2 flex flex-col bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden text-slate-700 text-xs font-bold">
+                  <button type="button" className="px-2 py-1 hover:bg-slate-100 border-b border-slate-100">
+                    +
+                  </button>
+                  <button type="button" className="px-2 py-1 hover:bg-slate-100">
+                    -
+                  </button>
+                </div>
+              </div>
+
+              {/* Map Legend Overlay */}
+              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-[11px]">
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="truncate">มีแผนแล้ว <strong>{stats.hasPlan}</strong></span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                  <span className="truncate">อยู่ระหว่างจัดทำ <strong>{stats.inProgress}</strong></span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                  <span className="truncate">ยังไม่จัดทำ <strong>{stats.noPlan}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            {/* Widget 2: สรุปแผนรายหมู่บ้าน (Donut Chart) */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                สรุปแผนรายหมู่บ้าน
+              </h3>
+
+              <div className="flex items-center justify-between gap-4 py-1">
+                
+                {/* SVG Donut Chart with center text */}
+                <div className="relative w-32 h-32 shrink-0 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    {/* Background circle */}
+                    <circle cx="50" cy="50" r="38" stroke="#f1f5f9" strokeWidth="12" fill="none" />
+                    {/* Slice 1: มีแผนแล้ว 80% (Green) */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      stroke="#10b981"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeDasharray={`${(stats.hasPlan / stats.total) * 238.76} 238.76`}
+                      strokeDashoffset="0"
+                      strokeLinecap="round"
+                    />
+                    {/* Slice 2: อยู่ระหว่างจัดทำ 13.3% (Amber) */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      stroke="#f59e0b"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeDasharray={`${(stats.inProgress / stats.total) * 238.76} 238.76`}
+                      strokeDashoffset={`-${(stats.hasPlan / stats.total) * 238.76}`}
+                      strokeLinecap="round"
+                    />
+                    {/* Slice 3: ยังไม่จัดทำ 6.7% (Rose) */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      stroke="#f43f5e"
+                      strokeWidth="12"
+                      fill="none"
+                      strokeDasharray={`${(stats.noPlan / stats.total) * 238.76} 238.76`}
+                      strokeDashoffset={`-${((stats.hasPlan + stats.inProgress) / stats.total) * 238.76}`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  {/* Center Label */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+                    <span className="text-xl font-black text-slate-800 font-mono">
+                      {stats.total}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                      หมู่บ้าน
+                    </span>
+                  </div>
+                </div>
+
+                {/* Legend with percentages */}
+                <div className="flex-1 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span className="text-slate-700">มีแผนแล้ว</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-slate-900">{stats.hasPlan}</span>
+                      <span className="text-slate-400 font-mono">{stats.hasPlanPct}%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      <span className="text-slate-700">อยู่ระหว่างจัดทำ</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-slate-900">{stats.inProgress}</span>
+                      <span className="text-slate-400 font-mono">{stats.inProgressPct}%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                      <span className="text-slate-700">ยังไม่จัดทำ</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-slate-900">{stats.noPlan}</span>
+                      <span className="text-slate-400 font-mono">{stats.noPlanPct}%</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Widget 3: เอกสาร/ข้อมูลที่เกี่ยวข้อง */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                เอกสาร/ข้อมูลที่เกี่ยวข้อง
+              </h3>
+
+              <div className="space-y-2.5">
+                {/* 1. แบบฟอร์มแผนรายหมู่บ้าน */}
+                <div
+                  onClick={handleDownloadForm}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/40 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-800 group-hover:text-blue-700 truncate">
+                        แบบฟอร์มแผนรายหมู่บ้าน
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Download className="w-3 h-3 text-blue-500" />
+                        <span>ดาวน์โหลดแบบฟอร์ม</span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 transition-colors shrink-0" />
+                </div>
+
+                {/* 2. คู่มือการจัดทำแผนรายหมู่บ้าน */}
+                <div
+                  onClick={handleDownloadGuide}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 hover:border-purple-300 hover:bg-purple-50/40 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-800 group-hover:text-purple-700 truncate">
+                        คู่มือการจัดทำแผนรายหมู่บ้าน
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Download className="w-3 h-3 text-purple-500" />
+                        <span>ดาวน์โหลดคู่มือ</span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-purple-600 transition-colors shrink-0" />
+                </div>
+
+                {/* 3. รายชื่อหมู่บ้านทั้งหมด (Excel) */}
+                <div
+                  onClick={handleDownloadExcel}
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200/80 hover:border-emerald-300 hover:bg-emerald-50/40 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 truncate">
+                        รายชื่อหมู่บ้านทั้งหมด (Excel)
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Download className="w-3 h-3 text-emerald-500" />
+                        <span>ดาวน์โหลดไฟล์</span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition-colors shrink-0" />
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 6. Village Detail Modal (ดูรายละเอียด) */}
+      {/* ========================================================================= */}
+      {selectedVillageDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Home className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-slate-900">
+                      หมู่ที่ {selectedVillageDetail.code} {selectedVillageDetail.villageName}
+                    </h2>
+                    <span
+                      className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${
+                        selectedVillageDetail.status === 'has_plan'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : selectedVillageDetail.status === 'in_progress'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                      }`}
+                    >
+                      {selectedVillageDetail.status === 'has_plan'
+                        ? 'มีแผนแล้ว'
+                        : selectedVillageDetail.status === 'in_progress'
+                        ? 'อยู่ระหว่างจัดทำ'
+                        : 'ยังไม่จัดทำ'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {selectedVillageDetail.subdistrict} {selectedVillageDetail.district} จังหวัดขอนแก่น
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedVillageDetail(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs text-slate-700">
+              
+              {/* Village Info Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="text-slate-400 font-medium">รอบปีที่จัดทำแผน</div>
+                  <div className="text-sm font-bold text-slate-900 font-mono mt-0.5">
+                    {selectedVillageDetail.planYears}
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="text-slate-400 font-medium">ประชากร</div>
+                  <div className="text-sm font-bold text-slate-900 font-mono mt-0.5">
+                    {selectedVillageDetail.population ? selectedVillageDetail.population.toLocaleString() : '-'} คน
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="text-slate-400 font-medium">จำนวนครัวเรือน</div>
+                  <div className="text-sm font-bold text-slate-900 font-mono mt-0.5">
+                    {selectedVillageDetail.households ? selectedVillageDetail.households.toLocaleString() : '-'} ครัวเรือน
+                  </div>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <div className="text-slate-400 font-medium">ผู้นำชุมชน / ผู้ใหญ่บ้าน</div>
+                  <div className="text-sm font-bold text-slate-900 mt-0.5 truncate">
+                    {selectedVillageDetail.headmanName || '-'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Projects in this Village */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-blue-600" />
+                    <span>โครงการพัฒนาท้องถิ่นที่เกี่ยวข้องในหมู่บ้านนี้ ({villageProjects.length})</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddNewProject?.(parseInt(selectedVillageDetail.code, 10));
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-bold transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่มโครงการใหม่</span>
+                  </button>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold">
+                        <th className="py-2.5 px-3 w-12 text-center">ลำดับ</th>
+                        <th className="py-2.5 px-3 w-28">รหัสโครงการ</th>
+                        <th className="py-2.5 px-3 min-w-[200px]">ชื่อโครงการ</th>
+                        <th className="py-2.5 px-3">แผนงาน / ยุทธศาสตร์</th>
+                        <th className="py-2.5 px-3 text-right">งบประมาณ (บาท)</th>
+                        <th className="py-2.5 px-3 text-center">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {villageProjects.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-slate-400">
+                            ยังไม่มีโครงการบรรจุลงในแผนสำหรับหมู่บ้านนี้
+                          </td>
+                        </tr>
+                      ) : (
+                        villageProjects.map((p, pIdx) => (
+                          <tr key={p.id} className="hover:bg-slate-50">
+                            <td className="py-2 px-3 text-center font-mono text-slate-500">{pIdx + 1}</td>
+                            <td className="py-2 px-3 font-mono font-bold text-slate-700">
+                              {getProjectDisplayId(p, p.orderNumber || pIdx + 1)}
+                            </td>
+                            <td className="py-2 px-3 font-bold text-slate-900">{p.name}</td>
+                            <td className="py-2 px-3 text-slate-600 truncate max-w-[180px]">
+                              {p.planCategory || p.planStrategy}
+                            </td>
+                            <td className="py-2 px-3 font-mono text-right font-bold text-emerald-700">
+                              {(p.budgetApproved || p.budgetPlan || 0).toLocaleString()}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => onViewProjectDetail(p)}
+                                className="text-blue-600 hover:text-blue-800 font-bold hover:underline"
+                              >
+                                รายละเอียด
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {villageProjects.length > 0 && (
+                      <tfoot>
+                        <tr className="bg-slate-50 font-bold text-slate-900 border-t border-slate-200">
+                          <td colSpan={4} className="py-2.5 px-3 text-right">
+                            งบประมาณรวมทั้งสิ้น:
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-right text-emerald-800 font-black">
+                            {villageTotalBudget.toLocaleString()}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500">
+                ข้อมูลแผนพัฒนาท้องถิ่น เทศบาลเมืองศิลา พ.ศ. 2571 - 2575
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedVillageDetail(null)}
+                className="px-4 py-1.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold cursor-pointer"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. Create New Village Plan Modal (+ สร้างแผนรายหมู่บ้านใหม่) */}
+      {/* ========================================================================= */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">สร้างแผนรายหมู่บ้านใหม่</h2>
+                  <p className="text-xs text-slate-500">บันทึกข้อมูลแผนพัฒนาท้องถิ่นระดับหมู่บ้าน/ชุมชน</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleCreateVillageSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  ชื่อหมู่บ้าน/ชุมชน <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="เช่น บ้านโนนตุ่น, บ้านดงพอง"
+                  value={newVillageForm.villageName}
+                  onChange={(e) => setNewVillageForm({ ...newVillageForm, villageName: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">ตำบล</label>
+                  <input
+                    type="text"
+                    value={newVillageForm.subdistrict}
+                    onChange={(e) => setNewVillageForm({ ...newVillageForm, subdistrict: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">อำเภอ</label>
+                  <input
+                    type="text"
+                    value={newVillageForm.district}
+                    onChange={(e) => setNewVillageForm({ ...newVillageForm, district: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">สถานะการจัดทำ</label>
+                  <select
+                    value={newVillageForm.status}
+                    onChange={(e) =>
+                      setNewVillageForm({
+                        ...newVillageForm,
+                        status: e.target.value as any
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                  >
+                    <option value="has_plan">มีแผนแล้ว</option>
+                    <option value="in_progress">อยู่ระหว่างจัดทำ</option>
+                    <option value="no_plan">ยังไม่จัดทำ</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">รอบปีที่จัดทำ</label>
+                  <input
+                    type="text"
+                    value={newVillageForm.planYears}
+                    onChange={(e) => setNewVillageForm({ ...newVillageForm, planYears: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">ผู้นำชุมชน/ผู้ใหญ่บ้าน</label>
+                  <input
+                    type="text"
+                    placeholder="ชื่อ-นามสกุล"
+                    value={newVillageForm.headmanName}
+                    onChange={(e) => setNewVillageForm({ ...newVillageForm, headmanName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">เบอร์โทรศัพท์ติดต่อ</label>
+                  <input
+                    type="text"
+                    placeholder="08x-xxx-xxxx"
+                    value={newVillageForm.contactPhone}
+                    onChange={(e) => setNewVillageForm({ ...newVillageForm, contactPhone: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs"
+                >
+                  บันทึกข้อมูล
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

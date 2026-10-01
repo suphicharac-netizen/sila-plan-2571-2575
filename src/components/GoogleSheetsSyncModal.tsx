@@ -395,11 +395,13 @@ export const GoogleSheetsSyncModal: React.FC<GoogleSheetsSyncModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="w-8 h-8 sm:w-9 sm:h-9 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg shadow-xs flex items-center justify-center cursor-pointer transition-colors p-0"
             title="ปิดหน้าต่าง"
+            aria-label="ปิดหน้าต่าง"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 stroke-[2.2]" />
           </button>
         </div>
 

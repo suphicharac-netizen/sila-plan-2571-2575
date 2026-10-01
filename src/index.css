@@ -1,10 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-prompt: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* =========================================================
+   1. GLOBAL FONT FAMILY & TYPOGRAPHY: PROMPT (GOOGLE FONTS)
+   ========================================================= */
 :root {
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
   color: #111827;
-  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
 }
 
 html, body, #root {
@@ -13,60 +23,282 @@ html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
   color: #111827;
   background-color: #f8fafc;
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Base text color high-contrast */
-body, input, select, textarea, button {
-  font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #111827;
+/* Enforce Prompt on all elements universally */
+*,
+body,
+input,
+select,
+textarea,
+button,
+label,
+table,
+th,
+td,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+div,
+a {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* =========================================================
-   2. Tables & Reports: Global Typography & Spacious Padding
+   2. GLOBAL TYPOGRAPHY HIERARCHY, WEIGHT & LINE-HEIGHT (1.5 - 1.6)
    ========================================================= */
-/* Table Headers: 17px - 18px Bold with Deep Emerald Green & Crisp White Text */
-table th,
-th {
-  font-size: 17px !important;
+
+/* 2.1 หัวข้อใหญ่ / Dashboard Title: ตัวหนา (Font-weight: 600 - 700) */
+h1,
+.dashboard-title,
+.page-title,
+.main-title {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 1.5rem !important; /* 24px */
   font-weight: 700 !important;
   line-height: 1.5 !important;
-  padding: 14px 16px !important;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+/* 2.2 หัวข้อการ์ด / Card Header: ตัวหนาปานกลาง (Font-weight: 500 - 600) */
+h2,
+h3,
+.card-header,
+.card-title,
+.section-title,
+.table-header-title {
+  font-family: 'Prompt', sans-serif !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  letter-spacing: -0.005em;
+  color: #1e293b;
+}
+
+h2 {
+  font-size: 1.25rem !important; /* 20px */
+}
+
+h3 {
+  font-size: 1.1rem !important; /* ~17.5px */
+}
+
+/* 2.3 ข้อความทั่วไป / Body Text: ตัวปกติ (Font-weight: 400, Line-height: 1.55 - 1.6) */
+p,
+.body-text,
+.desc-text {
+  font-family: 'Prompt', sans-serif !important;
+  font-weight: 400 !important;
+  line-height: 1.55 !important;
+  color: #334155;
+}
+
+/* 2.4 ตัวเลขสถิติ / KPI Numbers: ตัวหนาเด่นชัด (Font-weight: 600) เพื่อความอ่านง่าย */
+.kpi-number,
+.kpi-big-number,
+.stat-number,
+[data-kpi-value],
+.metric-value {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, monospace, sans-serif !important;
+  font-size: 1.65rem !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  font-variant-numeric: tabular-nums lining-nums !important;
+  letter-spacing: -0.01em;
+}
+
+/* 2.5 Sidebar Navigation (Font-weight: 500-600, Line-height: 1.5) */
+aside,
+#sidebar-navigation,
+.sidebar-item,
+.sidebar-link {
+  font-family: 'Prompt', sans-serif !important;
+  line-height: 1.5 !important;
+}
+
+/* 2.6 Form Labels, Inputs & Dropdowns (Standard 14px, Line-height: 1.5) */
+label,
+.form-label,
+.filter-label {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  color: #334155 !important;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  min-height: 38px !important;
+  padding: 6px 12px !important;
+  color: #0f172a !important;
+  box-sizing: border-box !important;
+}
+
+/* 2.7 Action & Filter Buttons: Font-weight: 500 - 600, Line-height: 1.5 */
+button:not(td button):not(.btn-icon):not([aria-label="Close"]):not(.modal-close-btn):not(.compact-btn):not(.icon-only-btn),
+.action-btn,
+.btn-standard,
+.filter-btn {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  min-height: 38px !important;
+  padding: 6px 14px !important;
+  box-sizing: border-box !important;
+}
+
+/* Compact buttons inside table action cells */
+td button,
+table td button,
+.table-action-btn,
+.compact-btn {
+  font-family: 'Prompt', sans-serif !important;
+  min-height: 30px !important;
+  padding: 4px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}
+
+/* 2.8 Table Header / Section Titles: Standard 14px - 15px (Font-weight: 600, Line-height: 1.5) */
+table th,
+th,
+thead th {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  padding: 10px 10px !important;
   letter-spacing: 0.01em;
 }
 
-/* Table Body Cells: 16px with Spacious 14px 16px Padding */
+/* 2.9 Table Body: Standard 13.5px - 14px Everywhere - Font-weight: 400, Line-height: 1.55 */
 table td,
-td {
-  font-size: 16px !important;
-  line-height: 1.6 !important;
-  padding: 14px 16px !important;
-  color: #1f2937;
+td,
+tbody td {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.55 !important;
+  padding: 8px 10px !important;
+  color: #1f2937 !important;
+}
+
+/* 2.10 Sub-texts / Badges / Captions: Standard 12px - 13px (Line-height: 1.5) */
+.sub-text,
+.badge,
+.pill,
+.caption,
+.text-badge {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
 }
 
 /* Keep dark green header background with clean white text on system tables */
-thead tr.bg-\[\#054e3b\],
-thead tr.bg-\[\#064e3b\],
-thead tr.bg-emerald-800,
-thead tr.bg-emerald-900,
-table thead th {
+thead tr.bg-\[\#054e3b\] th,
+thead tr.bg-\[\#064e3b\] th,
+thead tr.bg-emerald-800 th,
+thead tr.bg-emerald-900 th,
+table.dark-header thead th {
   color: #ffffff !important;
+}
+
+/* Print Preview / Standard ผ.02 Tables: Force 100% crisp black text on table headers */
+#plan02-print-sheet table thead th,
+#plan02-print-sheet table thead td,
+.p02-print-table thead th,
+.p02-table-header th {
+  color: #000000 !important;
+  font-weight: 600 !important;
 }
 
 /* Table footer summary rows */
 table tfoot td,
 table tfoot th {
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  padding: 14px 16px !important;
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  padding: 10px 10px !important;
 }
 
 /* =========================================================
-   3. Forms, Controls & Buttons: 16px font & Comfortable Size
+   2.11 Plan Detail 02 Data Table: Standardized to Prompt
+        Matching Action Buttons & Consistent Prompt Font
+   ========================================================= */
+#plan-table-wrapper table th,
+#plan-table-wrapper table thead th {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  padding: 10px 10px !important;
+  letter-spacing: 0.01em;
+}
+
+#plan-table-wrapper table td,
+#plan-table-wrapper table tbody td,
+#plan-table-wrapper table tbody td * {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.55 !important;
+  color: #1f2937;
+}
+
+#plan-table-wrapper table td,
+#plan-table-wrapper table tbody td {
+  padding: 9px 10px !important;
+}
+
+#plan-table-wrapper table tfoot td,
+#plan-table-wrapper table tfoot th {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  padding: 10px 10px !important;
+}
+
+/* Tabular numbers for financial and budget digits */
+.tabular-num-cell,
+#plan-table-wrapper .tabular-num-cell {
+  font-family: 'Prompt', -apple-system, BlinkMacSystemFont, monospace, sans-serif !important;
+  font-variant-numeric: tabular-nums lining-nums !important;
+  -moz-font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  -webkit-font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  line-height: 1.5 !important;
+}
+
+/* =========================================================
+   3. Forms, Controls & Buttons: Standardized Prompt & Line-height 1.5
    ========================================================= */
 /* Form inputs, dropdowns, selects, and textareas */
 input[type="text"],
@@ -76,18 +308,21 @@ input[type="number"],
 input[type="date"],
 select,
 textarea {
-  font-size: 16px !important;
-  line-height: 1.6 !important;
-  min-height: 42px !important;
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  min-height: 38px !important;
+  padding: 6px 12px !important;
   color: #111827 !important;
 }
 
 /* Form labels everywhere */
 label,
 .form-label {
-  font-size: 16px !important;
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
   line-height: 1.5 !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: #1f2937 !important;
 }
 
@@ -97,10 +332,12 @@ button.btn-action,
 button[type="submit"],
 button[type="button"].btn-primary,
 button[type="button"].btn-secondary {
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  min-height: 42px !important;
-  padding: 8px 16px !important;
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  min-height: 38px !important;
+  padding: 6px 14px !important;
 }
 
 /* =========================================================
@@ -108,25 +345,40 @@ button[type="button"].btn-secondary {
    ========================================================= */
 .modal-content,
 .modal-body {
-  font-size: 16px;
-  line-height: 1.6;
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
+#modal-plan-project-form label,
 .modal-content label {
-  font-size: 16px !important;
-  font-weight: 600 !important;
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}
+
+#modal-plan-project-form input,
+#modal-plan-project-form select,
+#modal-plan-project-form textarea,
+.modal-content input,
+.modal-content select,
+.modal-content textarea {
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
 }
 
 .modal-content .text-xs,
 .modal-body .text-xs {
-  font-size: 15px !important;
+  font-size: 12.5px !important;
   line-height: 1.5 !important;
 }
 
 .modal-content .text-sm,
 .modal-body .text-sm {
-  font-size: 16px !important;
-  line-height: 1.6 !important;
+  font-size: 13.5px !important;
+  line-height: 1.55 !important;
 }
 
 /* Custom sleek scrollbar for internal scrollable elements */
@@ -152,8 +404,10 @@ button[type="button"].btn-secondary {
 
 /* Strategy Section Header & Report Table Styles (Both Screen & Print) */
 .strategy-section-header {
-  font-size: 16pt;
-  font-weight: bold;
+  font-family: 'Prompt', sans-serif !important;
+  font-size: 15pt;
+  font-weight: 700;
+  line-height: 1.5;
   margin-top: 18px;
   margin-bottom: 10px;
   text-align: left;
@@ -167,19 +421,547 @@ button[type="button"].btn-secondary {
   margin-bottom: 24px;
 }
 
+/* ========================================================================= */
+/* Plan History Tables Style (Screen & Print: Pure White, Sharp 1px Borders, Black Text) */
+/* ========================================================================= */
+#plan-history-print-sheet,
+#plan-history-print-sheet * {
+  font-family: 'Prompt', 'TH Sarabun PSK', 'TH Sarabun New', 'Sarabun', sans-serif !important;
+}
+
+#plan-history-print-sheet {
+  line-height: 1.5 !important;
+  color: #000000 !important;
+}
+
+.plan-history-table,
+#plan-history-print-sheet table,
+.plan-history-table table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  border: 1px solid #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.plan-history-table thead,
+.plan-history-table tbody,
+.plan-history-table tr,
+.plan-history-table th,
+.plan-history-table td,
+.plan-history-table table th,
+.plan-history-table table td,
+#plan-history-print-sheet thead,
+#plan-history-print-sheet tbody,
+#plan-history-print-sheet tr,
+#plan-history-print-sheet th,
+#plan-history-print-sheet td,
+#plan-history-print-sheet .sub-budget-table th,
+#plan-history-print-sheet .sub-budget-table td {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #000000 !important;
+}
+
+#plan-history-print-sheet th {
+  padding: 4px 6px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
+#plan-history-print-sheet td {
+  padding: 4px 6px !important;
+  font-size: 15px !important;
+  line-height: 1.35 !important;
+}
+
+#plan-history-print-sheet .sub-budget-table th {
+  padding: 3px 5px !important;
+  font-size: 15px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  font-weight: 700 !important;
+}
+
+#plan-history-print-sheet .sub-budget-table td {
+  padding: 3px 5px !important;
+  font-size: 14.5px !important;
+}
+
+.plan-history-table tr:hover,
+.plan-history-table tr:hover td,
+.plan-history-table tr:hover th,
+#plan-history-print-sheet tr:hover,
+#plan-history-print-sheet tr:hover td,
+#plan-history-print-sheet tr:hover th {
+  background-color: #ffffff !important;
+}
+
+.plan-history-table *,
+#plan-history-print-sheet * {
+  color: #000000 !important;
+}
+
+/* ========================================================================= */
+/* Print Stylesheet for Form P.02 & Official Local Plan Reports             */
+/* ========================================================================= */
+
+@page {
+  size: A4 landscape;
+  margin: 8mm 10mm;
+}
+
 @media print {
-  /* Hide all elements with .no-print */
-  .no-print {
+  @page {
+    size: A4 auto;
+    margin: 8mm 10mm;
+  }
+
+  @page portrait-doc {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  /* Specific portrait styling for official municipal proclamations & letters */
+  #official-announcement-letter,
+  .print-portrait,
+  .official-proclamation-doc {
+    page: portrait-doc;
+  }
+
+  /* Hide Unnecessary UI elements when printing: Sidebar, Buttons, Search, Filters, Inputs */
+  .no-print,
+  nav,
+  button,
+  aside,
+  #sidebar-navigation,
+  .print\:hidden,
+  input,
+  select,
+  textarea,
+  .pagination-container,
+  #pagination-controls,
+  #edition-filter-panel,
+  #edition-top-banner,
+  .filter-panel,
+  .search-card-container,
+  header.sticky {
     display: none !important;
   }
 
-  /* Print Stylesheet */
+  /* Unconstrain html & body so multi-page documents print all pages without cut-off */
+  html,
   body {
     background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11pt;
+    width: 100% !important;
+    min-height: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Make main container full width and visible */
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+  }
+
+  ::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  * {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
+  /* Hide modal backdrop overlays & shadows during print */
+  [role="dialog"] ~ div,
+  .modal-backdrop,
+  .fixed.inset-0.bg-black\/50,
+  .fixed.inset-0.bg-black\/60,
+  .fixed.inset-0.bg-black\/70,
+  .fixed.inset-0.bg-slate-900\/50,
+  .fixed.inset-0.bg-slate-900\/60,
+  .fixed.inset-0.backdrop-blur-xs,
+  .fixed.inset-0.backdrop-blur-sm {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* When printing any modal / popup dialog: hide main content and sidebar behind it */
+  body:has([role="dialog"]) main,
+  body:has([role="dialog"]) aside,
+  body:has([role="dialog"]) #sidebar-navigation,
+  body:has(#in-plan-modal-backdrop) main,
+  body:has(#in-plan-modal-backdrop) aside,
+  body:has(#in-plan-modal-backdrop) #sidebar-navigation,
+  body:has(#in-plan-modal-container) main,
+  body:has(#in-plan-modal-container) aside,
+  body:has(#in-plan-modal-container) #sidebar-navigation,
+  body:has(#plan-history-modal-container) main,
+  body:has(#plan-history-modal-container) aside,
+  body:has(#plan-history-modal-container) #sidebar-navigation,
+  body:has(#project-workflow-modal-container) main,
+  body:has(#project-workflow-modal-container) aside,
+  body:has(#project-workflow-modal-container) #sidebar-navigation,
+  body:has(#modal-plan-comparison-form) main,
+  body:has(#modal-plan-comparison-form) aside,
+  body:has(#modal-plan-comparison-form) #sidebar-navigation {
+    display: none !important;
+  }
+
+  /* Modal containers unconstrained for print */
+  [role="dialog"],
+  [role="dialog"] > div,
+  #in-plan-modal-backdrop,
+  #in-plan-modal-container,
+  #plan-history-modal-backdrop,
+  #plan-history-modal-container,
+  #project-workflow-modal-backdrop,
+  #project-workflow-modal-container,
+  #modal-plan-comparison-form {
+    position: static !important;
+    inset: auto !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body:has(#plan-history-modal-container) .overflow-y-auto,
+  body:has(#plan-history-modal-container) .overflow-x-auto,
+  body:has(#in-plan-modal-container) .overflow-y-auto,
+  body:has(#in-plan-modal-container) .overflow-x-auto {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Plan History Print Sheet: Clean Document Styling */
+  #plan-history-print-sheet,
+  #plan-history-print-sheet * {
+    font-family: 'Prompt', 'TH Sarabun PSK', 'TH Sarabun New', 'Sarabun', sans-serif !important;
+  }
+
+  #plan-history-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+  }
+
+  #plan-history-print-sheet table {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1px solid #000000 !important;
+    background-color: #ffffff !important;
+  }
+
+  #plan-history-print-sheet th {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    padding: 4px 6px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    line-height: 1.3 !important;
+    word-break: break-word !important;
+  }
+
+  #plan-history-print-sheet td {
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    padding: 4px 6px !important;
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+    word-break: break-word !important;
+  }
+
+  #plan-history-print-sheet table.history-print-table {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+  }
+
+  #plan-history-print-sheet .sub-budget-table {
+    border: 1px solid #000000 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  #plan-history-print-sheet .sub-budget-table th {
+    border: 1px solid #000000 !important;
+    padding: 3px 5px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    line-height: 1.3 !important;
+  }
+
+  #plan-history-print-sheet .sub-budget-table td {
+    border: 1px solid #000000 !important;
+    padding: 3px 5px !important;
+    font-size: 14.5px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Form P.02 Single-Page Landscape Sheet (Fit to 1 Page Landscape) */
+  #plan02-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    max-height: 190mm !important;
+    box-sizing: border-box !important;
+  }
+
+  #plan02-print-sheet table {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    border: 1px solid #000000 !important;
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #plan02-print-sheet th {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 4px 3px !important;
+    text-align: center !important;
+    background-color: #f1f5f9 !important;
+    background: #f1f5f9 !important;
+    vertical-align: middle !important;
+    line-height: 1.25 !important;
+  }
+
+  #plan02-print-sheet thead tr:last-child th {
+    font-size: 10.5px !important;
+    padding: 3px 1px !important;
+    line-height: 1.15 !important;
+  }
+
+  #plan02-print-sheet th.dept-header {
+    font-size: 11px !important;
+    padding: 3px 2px !important;
+    line-height: 1.2 !important;
+  }
+
+  #plan02-print-sheet td {
+    font-size: 14px !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    padding: 6px 7px !important;
+    vertical-align: top !important;
+    line-height: 1.45 !important;
+    word-break: break-word !important;
+  }
+
+  #plan02-print-sheet td.tabular-num-cell,
+  #plan02-print-sheet td.font-mono {
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  #plan02-print-sheet h2 {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+  }
+
+  #plan02-print-sheet h3 {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+  }
+
+  #plan02-print-sheet p {
+    font-size: 14px !important;
+  }
+
+  /* Unconstrain scroll containers for standard multi-page reports */
+  main,
+  #root,
+  #plan-table-wrapper,
+  #plan-table-wrapper > div,
+  #printable-report-sheet,
+  .strategy-section,
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 2. Fit Table Width: Full 100% and break-word for cells */
+  table,
+  .report-table,
+  .p02-print-table,
+  table.p02-print-table,
+  table.budget-report-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    box-sizing: border-box !important;
+    margin-bottom: 12px !important;
+  }
+
+  .p02-print-table th,
+  .p02-print-table td,
+  .report-table th,
+  .report-table td,
+  table th,
+  table td {
+    word-break: break-word !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+  }
+
+  /* 4. Print Scaling: Font size (12px - 14px) and clear Cell Padding */
+  .p02-print-table,
+  table.p02-print-table,
+  .report-table,
+  table.report-table {
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+    border: 1px solid #000000 !important;
+  }
+
+  .p02-print-table th,
+  .report-table th {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    padding: 5px 6px !important;
+    background-color: #f1f5f9 !important;
+    background: #f1f5f9 !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+  }
+
+  .p02-print-table td,
+  .report-table td {
+    font-size: 12px !important;
+    padding: 4.5px 5.5px !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    vertical-align: top !important;
+  }
+
+  .p02-print-table td.text-right,
+  .p02-print-table th.text-right,
+  .report-table td.text-right,
+  .report-table th.text-right,
+  .tabular-num-cell {
+    text-align: right !important;
+    white-space: nowrap !important;
+  }
+
+  .p02-print-table td.text-center,
+  .p02-print-table th.text-center,
+  .report-table td.text-center,
+  .report-table th.text-center {
+    text-align: center !important;
+  }
+
+  .p02-print-table tfoot tr,
+  .p02-print-table tfoot td,
+  .report-table tfoot tr,
+  .report-table tfoot td {
+    background-color: #f8fafc !important;
+    background: #f8fafc !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    border: 1px solid #000000 !important;
+    border-top: 2px solid #000000 !important;
+    border-bottom: 2px solid #000000 !important;
+    font-size: 11px !important;
+    padding: 3.5px 4px !important;
+  }
+
+  /* Repeat headers/footers cleanly across pages & prevent awkward row split */
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Hide print-hidden columns or elements explicitly */
+  col.print\:hidden,
+  th.print\:hidden,
+  td.print\:hidden {
+    display: none !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
   }
 
   /* Table borders in budget report */
@@ -189,87 +971,45 @@ button[type="button"].btn-secondary {
   .budget-report-table td {
     border: 1px solid #000000 !important;
     color: #000000 !important;
+    padding: 3px 4px !important;
+    font-size: 10.5px !important;
   }
 
   .budget-report-table th {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
+    background-color: #f1f5f9 !important;
+    background: #f1f5f9 !important;
     color: #000000 !important;
     font-weight: 700 !important;
+    font-size: 11px !important;
   }
 
   .budget-report-table tfoot tr,
   .budget-report-table tfoot td {
-    background-color: #ffffff !important;
-    background: #ffffff !important;
+    background-color: #f8fafc !important;
+    background: #f8fafc !important;
     color: #000000 !important;
     font-weight: 700 !important;
     border-top: 2px solid #000000 !important;
   }
 
-  /* Official P.02 Local Plan Report Table Styles */
+  /* Strategy Section Header */
   .strategy-section-header {
-    font-size: 14pt !important;
+    font-size: 12pt !important;
     font-weight: bold !important;
-    margin-top: 15px !important;
-    margin-bottom: 8px !important;
+    margin-top: 12px !important;
+    margin-bottom: 6px !important;
     text-align: left !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
     color: #000000 !important;
   }
+}
 
-  .report-table,
-  table.report-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    margin-bottom: 20px !important;
-  }
-
-  .p02-print-table,
-  table.p02-print-table {
-    border-collapse: collapse !important;
-    empty-cells: show !important;
-    width: 100% !important;
-    border: 1px solid #000000 !important;
-  }
-
-  .p02-print-table th,
-  .p02-print-table td {
-    border: 1px solid #000000 !important;
-    color: #000000 !important;
-  }
-
-  .p02-print-table th {
-    background-color: #f1f5f9 !important;
-    background: #f1f5f9 !important;
-    color: #000000 !important;
-    font-weight: 700 !important;
-    text-align: center !important;
-  }
-
-  .p02-print-table tr {
-    page-break-inside: avoid;
-  }
-
-  .p02-print-table td.text-right,
-  .p02-print-table th.text-right {
-    text-align: right !important;
-  }
-
-  .p02-print-table td.text-center,
-  .p02-print-table th.text-center {
-    text-align: center !important;
-  }
-
-  .p02-print-table tfoot tr,
-  .p02-print-table tfoot td {
-    background-color: #f8fafc !important;
-    background: #f8fafc !important;
-    color: #000000 !important;
-    font-weight: 700 !important;
-    border: 1px solid #000000 !important;
-    border-top: 2px solid #000000 !important;
-    border-bottom: 2px solid #000000 !important;
-  }
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

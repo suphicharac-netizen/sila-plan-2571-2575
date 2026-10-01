@@ -170,10 +170,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-8 h-8 sm:w-9 sm:h-9 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg shadow-xs flex items-center justify-center cursor-pointer transition-colors p-0"
+              title="ปิดหน้าต่าง"
+              aria-label="ปิดหน้าต่าง"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 stroke-[2.2]" />
             </button>
           </div>
 
@@ -637,9 +640,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClose();
                   if (onOpenAnalytics) onOpenAnalytics();
                 }}
-                className="text-emerald-700 hover:text-emerald-800 font-semibold underline cursor-pointer"
+                className="text-emerald-700 hover:text-emerald-800 font-semibold underline cursor-pointer inline-flex items-center gap-1.5"
               >
-                📊 ดูหน้าสรุปสถิติผู้เข้าชมระบบ (Visitor Analytics)
+                <span>ดูหน้าสรุปสถิติผู้เข้าชมระบบ (Visitor Analytics)</span>
               </button>
             )}
           </div>

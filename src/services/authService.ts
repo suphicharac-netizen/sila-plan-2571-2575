@@ -166,7 +166,7 @@ export const authService = {
   },
 
   // 2. Session Management
-  getCurrentUser(): UserAccount {
+  getCurrentUser(): UserAccount | null {
     try {
       const stored = localStorage.getItem(SESSION_STORAGE_KEY);
       if (stored) {
@@ -175,12 +175,9 @@ export const authService = {
           return parsed;
         }
       }
-      // Default initial session is Admin (นางสุพิชฌาย์ ราชเซ่ง)
-      const defaultUser = INITIAL_USERS[0];
-      this.setCurrentUser(defaultUser);
-      return defaultUser;
+      return null;
     } catch {
-      return INITIAL_USERS[0];
+      return null;
     }
   },
 
@@ -432,6 +429,8 @@ export const authService = {
       return publicUser;
     }
 
-    return this.getCurrentUser();
+    const fallback = INITIAL_USERS[0];
+    this.setCurrentUser(fallback);
+    return fallback;
   }
 };

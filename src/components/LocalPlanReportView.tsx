@@ -18,6 +18,7 @@ import {
 import { ProjectData } from '../types';
 import { DEVELOPMENT_STRATEGIES, DEPARTMENTS } from '../utils/constants';
 import { matchesProjectSearch } from '../utils/projectCode';
+import { exportTableToExcel } from '../utils/exportUtils';
 
 interface LocalPlanReportViewProps {
   projects: ProjectData[];
@@ -148,6 +149,59 @@ export const LocalPlanReportView: React.FC<LocalPlanReportViewProps> = ({
     );
   }, [activeTab]);
 
+  // Export Excel (.xlsx)
+  const handleExportExcel = () => {
+    setIsExportDropdownOpen(false);
+    const headers = [
+      'ที่',
+      'โครงการ',
+      'วัตถุประสงค์',
+      'เป้าหมาย (ผลผลิตของโครงการ)',
+      'งบประมาณ พ.ศ. 2571 (บาท)',
+      'งบประมาณ พ.ศ. 2572 (บาท)',
+      'งบประมาณ พ.ศ. 2573 (บาท)',
+      'งบประมาณ พ.ศ. 2574 (บาท)',
+      'งบประมาณ พ.ศ. 2575 (บาท)',
+      'รวม 5 ปี (บาท)',
+      'ผลที่คาดว่าจะได้รับ',
+      'หน่วยงานรับผิดชอบ',
+      ...(showReasonColumn ? ['เหตุผลความจำเป็น'] : [])
+    ];
+
+    const rows = filteredProjects.map((p, idx) => {
+      const b71 = Number(p.budgetByYear?.['2571']) || 0;
+      const b72 = Number(p.budgetByYear?.['2572']) || 0;
+      const b73 = Number(p.budgetByYear?.['2573']) || 0;
+      const b74 = Number(p.budgetByYear?.['2574']) || 0;
+      const b75 = Number(p.budgetByYear?.['2575']) || 0;
+      const total = b71 + b72 + b73 + b74 + b75 || Number(p.budgetPlan) || 0;
+      return [
+        idx + 1,
+        p.name,
+        p.objective || '-',
+        p.target || '-',
+        b71,
+        b72,
+        b73,
+        b74,
+        b75,
+        total,
+        p.expectedResults || '-',
+        p.department || '-',
+        ...(showReasonColumn ? [p.reason || p.note || '-'] : [])
+      ];
+    });
+
+    exportTableToExcel({
+      filename: `รายงานแผนพัฒนาท้องถิ่น_${activeTab}_2571-2575`,
+      title: 'แบบ ผ.02 บัญชีรายละเอียดโครงการพัฒนา เทศบาลเมืองศิลา',
+      subTitle: getEditionTitleLine(),
+      filterDesc: selectedYear !== 'all' ? `ปีงบประมาณ พ.ศ. ${selectedYear}` : 'ปีงบประมาณ พ.ศ. 2571-2575',
+      headers,
+      rows
+    });
+  };
+
   // Export CSV
   const handleExportCSV = () => {
     setIsExportDropdownOpen(false);
@@ -206,7 +260,7 @@ export const LocalPlanReportView: React.FC<LocalPlanReportViewProps> = ({
         <title>รายงานแผนพัฒนาท้องถิ่น (แบบ ผ.02)</title>
         <style>
           @page { size: landscape; margin: 1cm; }
-          body { font-family: 'TH Sarabun PSK', 'TH Sarabun New', 'Angsana New', sans-serif; font-size: 14pt; }
+          body { font-family: 'Prompt', 'TH Sarabun PSK', 'TH Sarabun New', 'Angsana New', sans-serif; font-size: 14pt; }
           .strategy-section-header { font-size: 14pt; font-weight: bold; margin-top: 15px; margin-bottom: 8px; text-align: left; page-break-after: avoid; }
           .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
           table { width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 20px; }
@@ -396,53 +450,69 @@ export const LocalPlanReportView: React.FC<LocalPlanReportViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 h-full min-h-0 overflow-hidden print:bg-white print:overflow-visible">
-      {/* 1. Header Banner with Print and Export buttons */}
-      <header className="bg-[#055740] text-white px-4 py-2.5 sm:px-6 shadow-xs flex items-center justify-between shrink-0 no-print print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#086d50] flex items-center justify-center shrink-0">
-            <FileText className="w-4 h-4 text-emerald-100" />
+      {/* 1. Header Banner - Clean, concise, balanced height */}
+      <header className="bg-[#055740] text-white px-4 py-2 sm:px-6 shadow-xs flex items-center justify-between shrink-0 no-print print:hidden">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 p-0.5 border border-emerald-400/40 flex items-center justify-center shrink-0 shadow-xs select-none overflow-hidden ring-1 ring-amber-400/30">
+            <img
+              src="/sila-logo.png"
+              alt="ตราเทศบาลเมืองศิลา จังหวัดขอนแก่น"
+              className="w-full h-full object-contain rounded-full aspect-square"
+              referrerPolicy="no-referrer"
+            />
           </div>
-          <div>
-            <h1 className="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-              <span>รายงานแผนพัฒนาท้องถิ่น</span>
-              <span className="text-emerald-400 font-normal text-xs">|</span>
-              <span className="text-emerald-100 text-xs font-normal">เทศบาลเมืองศิลา จ.ขอนแก่น</span>
-            </h1>
-            <p className="text-[11px] text-emerald-200/80">
-              ดึงข้อมูลแบบ ผ.01 และ แบบ ผ.02 ทุกฉบับ (ฉบับแรก, ฉบับเพิ่มเติม, ฉบับเปลี่ยนแปลง, ฉบับแก้ไข และฉบับรวม)
-            </p>
-          </div>
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
+            รายงานแผนพัฒนาท้องถิ่น (แบบ ผ.01 / ผ.02)
+          </h1>
         </div>
 
         {/* Prominent Print & Export Excel Buttons at Top Right */}
         <div className="flex items-center gap-2">
-          {/* Export Excel / CSV Dropdown */}
+          {/* Export Excel / CSV Split Button */}
           <div className="relative">
-            <button
-              id="btn-export-plan-report-top"
-              type="button"
-              onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#064232] hover:bg-[#085440] text-emerald-100 border border-emerald-700/60 rounded-lg text-xs font-medium transition-colors cursor-pointer shadow-xs"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
-              <span>ส่งออก Excel</span>
-              <ChevronDown className="w-3 h-3 text-emerald-400" />
-            </button>
+            <div className="inline-flex rounded-lg shadow-xs">
+              <button
+                id="btn-export-plan-report-top"
+                type="button"
+                onClick={handleExportExcel}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#064232] hover:bg-[#085440] text-emerald-100 border border-emerald-700/60 rounded-l-lg text-xs font-semibold transition-colors cursor-pointer"
+                title="ส่งออกตารางข้อมูลเป็นไฟล์ Excel (.xlsx) ทันที"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+                <span>ส่งออก Excel</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                className="px-2 py-1.5 bg-[#064232] hover:bg-[#085440] text-emerald-100 border-y border-r border-emerald-700/60 rounded-r-lg text-xs transition-colors cursor-pointer"
+                title="เลือกรูปแบบไฟล์ส่งออกเพิ่มเติม"
+              >
+                <ChevronDown className="w-3 h-3 text-emerald-400" />
+              </button>
+            </div>
 
             {isExportDropdownOpen && (
-              <div className="absolute right-0 mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-30 text-xs text-slate-700 animate-in fade-in duration-100">
+              <div className="absolute right-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-30 text-xs text-slate-700 animate-in fade-in duration-100">
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 flex items-center gap-2 cursor-pointer font-medium"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span>ส่งออก Excel (.xlsx)</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleExportCSV}
-                  className="w-full text-left px-3 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 flex items-center gap-2 cursor-pointer"
+                  className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 flex items-center gap-2 cursor-pointer"
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                  <span>ส่งออก Excel (.csv)</span>
+                  <Download className="w-4 h-4 text-slate-500" />
+                  <span>ส่งออก CSV (Excel UTF-8)</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleExportWord}
-                  className="w-full text-left px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-900 flex items-center gap-2 cursor-pointer"
+                  className="w-full text-left px-3.5 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-900 flex items-center gap-2 cursor-pointer"
                 >
                   <FileCode2 className="w-4 h-4 text-blue-600" />
                   <span>ส่งออก Word (.doc)</span>
@@ -817,7 +887,7 @@ export const LocalPlanReportView: React.FC<LocalPlanReportViewProps> = ({
                       <td className="border border-slate-900 py-3 px-2 text-right font-mono">
                         {grandTotals['2575'].toLocaleString()}
                       </td>
-                      <td className="border border-slate-900 py-3 px-3 text-right font-mono font-bold text-emerald-800">
+                      <td className="border border-slate-900 py-3 px-3 text-right font-mono font-bold text-slate-900">
                         {grandTotals.all.toLocaleString()}
                       </td>
                     </tr>
@@ -997,7 +1067,7 @@ export const LocalPlanReportView: React.FC<LocalPlanReportViewProps> = ({
                           {/* ช่องขวา (Colspan ยุบรวมช่อง 'ผลที่คาดว่าจะได้รับ' และ 'หน่วยงานหลัก'): แสดงยอดรวมงบประมาณทั้งสิ้น */}
                           <td
                             colSpan={showReasonColumn ? 3 : 2}
-                            className="border border-slate-900 py-3 px-3 text-right font-bold text-xs text-emerald-800 print:border-black print:text-black"
+                            className="border border-slate-900 py-3 px-3 text-right font-bold text-xs text-slate-900 print:border-black print:text-black"
                           >
                             รวมงบประมาณทั้งสิ้น {grandTotals.all.toLocaleString()} บาท
                           </td>
@@ -1021,13 +1091,13 @@ export const LocalPlanReportView: React.FC<LocalPlanReportViewProps> = ({
                   <span>
                     งบประมาณรวมปี 2571:{' '}
                     <strong className="text-emerald-700 font-mono">
-                      ฿{grandTotals['2571'].toLocaleString()}
+                      {grandTotals['2571'].toLocaleString()} บาท
                     </strong>
                   </span>
                   <span>
                     งบประมาณรวมทั้งสิ้น 5 ปี:{' '}
                     <strong className="text-slate-900 font-mono">
-                      ฿{grandTotals.all.toLocaleString()}
+                      {grandTotals.all.toLocaleString()} บาท
                     </strong>
                   </span>
                 </div>

@@ -34,11 +34,36 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
   onOpenApprovalModal
 }) => {
   // Title mapping
-  const titles: Record<ActiveNavMenu, { title: string; subtitle: string; icon: React.ReactNode }> = {
+  const titles: Partial<Record<ActiveNavMenu, { title: string; subtitle: string; icon: React.ReactNode }>> = {
     dashboard: {
       title: 'แดชบอร์ดภาพรวมแผนพัฒนา 5 ปี (พ.ศ. 2571-2575)',
       subtitle: 'สรุปสถานะโครงการ งบประมาณรายจ่าย และสถิติการดำเนินงานของเทศบาลเมืองศิลา',
       icon: <LayoutDashboard className="w-5 h-5 text-emerald-600" />
+    },
+    citizen_portal: {
+      title: 'ข้อมูลสำหรับประชาชน',
+      subtitle: 'ตรวจสอบข้อมูลแผนพัฒนาท้องถิ่น โครงการ กิจกรรม และข่าวสารที่เป็นประโยชน์ต่อประชาชน',
+      icon: <Building2 className="w-5 h-5 text-blue-600" />
+    },
+    citizen_news: {
+      title: 'ข่าวสาร / ประชาสัมพันธ์',
+      subtitle: 'ประกาศและข่าวสารกิจกรรมเทศบาลเมืองศิลา',
+      icon: <Building2 className="w-5 h-5 text-blue-600" />
+    },
+    citizen_downloads: {
+      title: 'ดาวน์โหลดเอกสาร',
+      subtitle: 'เอกสารและแบบฟอร์มสำหรับประชาชน',
+      icon: <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+    },
+    citizen_faq: {
+      title: 'คำถามที่พบบ่อย (FAQ)',
+      subtitle: 'ข้อสงสัยเกี่ยวกับการจัดทำแผนพัฒนาท้องถิ่น',
+      icon: <Building2 className="w-5 h-5 text-blue-600" />
+    },
+    citizen_contact: {
+      title: 'ติดต่อหน่วยงาน',
+      subtitle: 'ช่องทางการติดต่อเทศบาลเมืองศิลา',
+      icon: <Building2 className="w-5 h-5 text-blue-600" />
     },
     edition_first: {
       title: 'แผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) ฉบับแรก',
@@ -85,11 +110,6 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
       subtitle: 'รายงานสรุปผลการเปรียบเทียบโครงการตามแผนพัฒนาและโครงการที่อนุมัติงบประมาณ',
       icon: <ArrowLeftRight className="w-5 h-5 text-emerald-600" />
     },
-    project_search: {
-      title: 'ระบบสืบค้นและคัดกรองโครงการอัจฉริยะ',
-      subtitle: 'ค้นหาโครงการตามยุทธศาสตร์ แผนงาน พิกัดชุมชน และงบประมาณ',
-      icon: <Search className="w-5 h-5 text-emerald-600" />
-    },
     village_plan: {
       title: 'แผนพัฒนารายหมู่บ้าน (Zone Hierarchy)',
       subtitle: 'โครงสร้างการกระจายโครงการและงบประมาณระดับเขตและหมู่บ้าน (28 หมู่บ้าน 3 เขต)',
@@ -121,14 +141,14 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 h-full min-h-0 overflow-hidden">
-      {/* Top Banner Bar */}
-      <header className="bg-[#055740] text-white px-4 py-2 sm:px-6 shadow-sm flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
+      {/* Top Banner Bar - Clean, concise, balanced height */}
+      <header className="bg-[#055740] text-white px-4 py-2 sm:px-6 shadow-xs flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-[#086d50] flex items-center justify-center shrink-0">
             <Building2 className="w-4 h-4 text-emerald-100" />
           </div>
-          <h1 className="text-xs sm:text-sm font-bold tracking-tight">
-            {current.title} | เทศบาลเมืองศิลา จ.ขอนแก่น
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
+            {current.title}
           </h1>
         </div>
 
@@ -179,7 +199,7 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                 <div className="text-xs text-slate-500">งบประมาณตามแผนรวม</div>
                 <div className="text-2xl font-bold font-mono text-slate-900 mt-1">
-                  ฿{projects.reduce((s, p) => s + p.budgetPlan, 0).toLocaleString()}
+                  {projects.reduce((s, p) => s + p.budgetPlan, 0).toLocaleString()}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">ปีงบประมาณ พ.ศ. 2571</div>
               </div>
@@ -187,7 +207,7 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                 <div className="text-xs text-slate-500">อนุมัติงบประมาณแล้ว</div>
                 <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
-                  ฿{projects.reduce((s, p) => s + p.budgetApproved, 0).toLocaleString()}
+                  {projects.reduce((s, p) => s + p.budgetApproved, 0).toLocaleString()}
                 </div>
                 <div className="text-[11px] text-emerald-600 mt-1">
                   {projects.filter((p) => p.status === 'approved').length} โครงการ
@@ -197,7 +217,6 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                 <div className="text-xs text-slate-500">งบคงเหลือรอจัดสรร</div>
                 <div className="text-2xl font-bold font-mono text-blue-700 mt-1">
-                  ฿
                   {(
                     projects.reduce((s, p) => s + p.budgetPlan, 0) -
                     projects.reduce((s, p) => s + p.budgetApproved, 0)
@@ -224,7 +243,7 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
                       </div>
                     </div>
                     <div className="font-mono font-semibold text-slate-900">
-                      ฿{p.budgetPlan.toLocaleString()}
+                      {p.budgetPlan.toLocaleString()}
                     </div>
                   </div>
                 ))}
@@ -237,7 +256,7 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
               <span className="text-slate-600">
                 พบรายการในหมวดนี้: <strong>{filteredList.length} โครงการ</strong> | งบรวม:{' '}
-                <strong className="text-slate-900">฿{totalBudget.toLocaleString()}</strong>
+                <strong className="text-slate-900">{totalBudget.toLocaleString()} บาท</strong>
               </span>
             </div>
 
@@ -261,7 +280,7 @@ export const OtherViews: React.FC<OtherViewsProps> = ({
                       <td className="py-3 px-4 font-medium text-slate-900">{p.name}</td>
                       <td className="py-3 px-3 text-slate-600">{p.planCategory}</td>
                       <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900">
-                        {p.budgetPlan > 0 ? `฿${p.budgetPlan.toLocaleString()}` : '-'}
+                        {p.budgetPlan > 0 ? `${p.budgetPlan.toLocaleString()}` : '-'}
                       </td>
                       <td className="py-3 px-3 text-center">
                         {p.status === 'approved' ? (

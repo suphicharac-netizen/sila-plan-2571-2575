@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Printer, Search, ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react';
 import { ProjectData } from '../types';
 import { matchesProjectSearch, getProjectDisplayId } from '../utils/projectCode';
+import { exportTableToExcel } from '../utils/exportUtils';
 
 interface RemainingBudgetModalProps {
   isOpen: boolean;
@@ -104,6 +105,38 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
     window.print();
   };
 
+  const handleExportExcel = () => {
+    const headers = [
+      'ลำดับ',
+      'รหัสโครงการ',
+      'ชื่อโครงการ',
+      'ยุทธศาสตร์',
+      'สำนัก/กอง',
+      'งบประมาณตามแผน (บาท)',
+      'งบประมาณที่อนุมัติ (บาท)',
+      'งบประมาณคงเหลือ (บาท)',
+      'แหล่งเงิน'
+    ];
+    const rows = filteredProjects.map((p, idx) => [
+      idx + 1,
+      p.code || `PRJ-${p.orderNumber || idx + 1}`,
+      p.name,
+      p.planStrategy || '-',
+      p.department || '-',
+      p.budgetPlan || 0,
+      p.budgetApproved || 0,
+      Math.max(0, (p.budgetPlan || 0) - (p.budgetApproved || 0)),
+      p.budgetSource || '-'
+    ]);
+    exportTableToExcel({
+      filename: `รายงานสรุปงบประมาณคงเหลือ_ปี_${selectedYear}`,
+      title: 'รายงานสรุปยอดงบประมาณคงเหลือและการจัดสรรงบประมาณ เทศบาลเมืองศิลา',
+      subTitle: `ประจำปีงบประมาณ พ.ศ. ${selectedYear === 'all' ? '2571-2575 (ทุกปีงบประมาณ)' : selectedYear}`,
+      headers,
+      rows
+    });
+  };
+
   return (
     <div
       id="remaining-budget-report-modal"
@@ -200,23 +233,36 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
 
           <div className="flex items-center gap-2 print:hidden">
             <button
+              id="btn-export-remaining-excel"
+              type="button"
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+              title="ส่งออกรายงานเป็นไฟล์ Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>ส่งออก Excel</span>
+            </button>
+
+            <button
               id="btn-print-remaining-report"
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-[#4f46e5] hover:bg-[#4338ca] rounded-lg shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#4f46e5] hover:bg-[#4338ca] rounded-lg shadow-xs transition-colors cursor-pointer"
+              title="พิมพ์หน้ารายงานนี้ออกทางเครื่องพิมพ์"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>พิมพ์รายงาน</span>
+              <span>พิมพ์หน้านี้</span>
             </button>
 
             <button
               id="btn-close-remaining-report"
               type="button"
               onClick={onClose}
-              className="text-slate-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-8 h-8 sm:w-9 sm:h-9 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg shadow-xs flex items-center justify-center cursor-pointer transition-colors p-0"
+              title="ปิดหน้าต่าง"
               aria-label="ปิดหน้าต่าง"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5 stroke-[2.2]" />
             </button>
           </div>
         </div>
@@ -336,7 +382,7 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                   ยอดงบประมาณตามแผนทั้งหมด
                 </div>
                 <div className="text-lg font-bold font-mono text-slate-900 mt-0.5 tracking-tight print:text-black">
-                  ฿{totalPlan.toLocaleString()}
+                  {totalPlan.toLocaleString()} บาท
                 </div>
               </div>
 
@@ -346,7 +392,7 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                   ยอดงบประมาณที่อนุมัติแล้ว
                 </div>
                 <div className="text-lg font-bold font-mono text-[#15803d] mt-0.5 tracking-tight print:text-black">
-                  ฿{totalApproved.toLocaleString()}
+                  {totalApproved.toLocaleString()} บาท
                 </div>
               </div>
 
@@ -356,14 +402,14 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                   ยอดงบประมาณคงเหลือ
                 </div>
                 <div className="text-lg font-bold font-mono text-[#4f46e5] mt-0.5 tracking-tight print:text-black">
-                  ฿{totalRemaining.toLocaleString()}
+                  {totalRemaining.toLocaleString()} บาท
                 </div>
               </div>
             </div>
           </div>
 
           {/* ตารางแสดงข้อมูล Compact (py-1.5 px-2 text-xs) */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs print:border-none print:shadow-none print:rounded-none flex flex-col justify-start">
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs print:border-none print:shadow-none print:rounded-none flex flex-col justify-start pb-2">
             {viewMode === 'projects' ? (
               /* PRIMARY REQUESTED 6-COLUMN TABLE */
               <table className="w-full text-left border-collapse budget-report-table">
@@ -481,7 +527,7 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                 <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300 text-xs shadow-2xs print:bg-white print:border-black">
                   <tr className="print:border-black">
                     <td
-                      colSpan={3}
+                      colSpan={2}
                       className="py-1.5 px-2.5 text-right font-bold text-slate-900 border-r border-slate-200 print:border-black print:text-black"
                     >
                       รวมทั้งสิ้น ({totalProjects} โครงการ)
@@ -489,10 +535,10 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                     <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-900 border-r border-slate-200 print:border-black print:text-black whitespace-nowrap">
                       {totalPlan.toLocaleString()}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono font-bold text-[#15803d] border-r border-slate-200 print:border-black print:text-black whitespace-nowrap">
+                    <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-900 border-r border-slate-200 print:border-black print:text-black whitespace-nowrap">
                       {totalApproved.toLocaleString()}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono font-bold text-[#4f46e5] print:border-black print:text-black whitespace-nowrap">
+                    <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-900 print:border-black print:text-black whitespace-nowrap">
                       {totalRemaining.toLocaleString()}
                     </td>
                   </tr>
@@ -550,19 +596,19 @@ export const RemainingBudgetModal: React.FC<RemainingBudgetModalProps> = ({
                 </tbody>
                 <tfoot className="bg-slate-100 font-bold border-t-2 border-slate-300 text-xs shadow-2xs print:bg-white print:border-black">
                   <tr className="print:border-black">
-                    <td colSpan={2} className="py-1.5 px-3 text-right text-slate-800 font-bold border-r border-slate-200 print:border-black print:text-black">
+                    <td colSpan={2} className="py-1.5 px-3 text-right text-slate-900 font-bold border-r border-slate-200 print:border-black print:text-black">
                       รวมทั้งสิ้น
                     </td>
-                    <td className="py-1.5 px-2 text-center font-mono text-slate-900 border-r border-slate-200 print:border-black print:text-black">
+                    <td className="py-1.5 px-2 text-center font-mono font-bold text-slate-900 border-r border-slate-200 print:border-black print:text-black">
                       {totalProjects}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono text-slate-900 border-r border-slate-200 print:border-black print:text-black whitespace-nowrap">
+                    <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-900 border-r border-slate-200 print:border-black print:text-black whitespace-nowrap">
                       {totalPlan.toLocaleString()}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono text-[#15803d] border-r border-slate-200 print:border-black print:text-black whitespace-nowrap">
+                    <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-900 border-r border-slate-200 print:border-black print:text-black whitespace-nowrap">
                       {totalApproved.toLocaleString()}
                     </td>
-                    <td className="py-1.5 px-2 text-right font-mono text-[#4f46e5] print:border-black print:text-black whitespace-nowrap">
+                    <td className="py-1.5 px-2 text-right font-mono font-bold text-slate-900 print:border-black print:text-black whitespace-nowrap">
                       {totalRemaining.toLocaleString()}
                     </td>
                   </tr>

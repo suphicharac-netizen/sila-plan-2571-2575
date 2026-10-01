@@ -6,18 +6,31 @@ export type PublishStatus = 'pending_publish' | 'published_first' | 'published_a
 
 export type ProjectExecutionStatus = 'in_progress' | 'completed' | 'cancelled' | 'not_started';
 
+export type ProjectAreaType = 'village' | 'facility' | 'custom';
+
+export interface ApprovalAuditEntry {
+  action: string;
+  timestamp: string;
+  userName: string;
+  userRole?: string;
+  note?: string;
+  amount?: number;
+}
+
 export interface ProjectData {
   id: string;
   orderNumber: number;
   code: string;
   name: string;
   planStrategy: string; // ประเด็นการพัฒนา
+  strategy?: string; // ยุทธศาสตร์
   planCategory: string; // แผนงาน เช่น แผนงานการศึกษา, แผนงานอุตสาหกรรมและการโยธา
   edition: PlanEdition; // ฉบับแรก, เพิ่มเติม, เปลี่ยนแปลง, แก้ไข
   editionNumber?: number; // ครั้งที่
   publishStatus: PublishStatus; // รอจัดรอบประกาศใช้, ประกาศใช้แล้ว ฯลฯ
   objective?: string; // วัตถุประสงค์
   target?: string; // เป้าหมาย (ผลผลิต)
+  kpi?: string; // ตัวชี้วัด (KPI)
   budgetByYear?: {
     '2571'?: number;
     '2572'?: number;
@@ -31,7 +44,11 @@ export interface ProjectData {
   budgetApproved: number; // งบประมาณที่อนุมัติ
   approvedDate: string; // วันที่อนุมัติ
   approvalOrderNo?: string; // เลขที่คำสั่ง/มติ
+  approvedBy?: string; // ผู้อนุมัติ
+  approvedAt?: string; // วันที่และเวลาอนุมัติ
+  approvalAuditTrail?: ApprovalAuditEntry[]; // ประวัติการอนุมัติ (Audit Trail)
   status: BudgetStatus; // สถานะ: ยังไม่อนุมัติงบ, อนุมัติงบแล้ว
+  planStatus?: 'draft' | 'approved'; // สถานะแผนพัฒนาท้องถิ่น: 'draft' = ร่างแผน (ก่อนอนุมัติ), 'approved' = อนุมัติ / ประกาศใช้แล้ว
   executionStatus?: ProjectExecutionStatus; // สถานะการดำเนินงานโครงการ: in_progress | completed | cancelled | not_started
   executionProgressNote?: string; // บันทึกหมายเหตุความก้าวหน้าโครงการ
   executionUpdatedDate?: string; // วันที่อัปเดตสถานะการดำเนินงานล่าสุด
@@ -45,12 +62,14 @@ export interface ProjectData {
   reason?: string; // เหตุผลความจำเป็น (กรณีฉบับเปลี่ยนแปลง หรือ แก้ไข)
   originalProjectId?: string;
   originalProjectName?: string;
+  originalPlanStrategy?: string;
   originalEdition?: PlanEdition;
   originalTarget?: string;
   originalObjective?: string;
   originalExpectedResults?: string;
   originalDepartment?: string;
   originalBudgetPlan?: number;
+  originalApprovedDate?: string;
   originalBudgetByYear?: {
     '2571'?: number;
     '2572'?: number;
@@ -62,6 +81,8 @@ export interface ProjectData {
   village?: string; // เช่น 'หมู่ที่ 1 บ้านโนนม่วง'
   villageNumber?: number; // 1 - 28
   isBudgetAllocated?: boolean; // สถานะการนำไปตั้งงบประมาณ: true = ตั้งงบประมาณแล้ว, false = อยู่ในแผน (ยังไม่ตั้งงบ)
+  imageUrl?: string; // ภาพประกอบโครงการ (Data URL หรือ URL รูปภาพ)
+  image?: string; // ภาพประกอบโครงการ
 }
 
 export interface FilterCriteria {
@@ -84,13 +105,39 @@ export interface PlanAnnouncement {
   announcementNo?: string; // เลขที่ประกาศ เช่น 'ทม.ศล. 01/2571'
   approver?: string; // ผู้อนุมัติ เช่น นายกเทศมนตรีเมืองศิลา
   projectIds: string[]; // รายการรหัสโครงการที่บรรจุในประกาศนี้
-  status: 'approved' | 'pending';
+  status: 'approved' | 'pending' | 'pending_approval' | 'pending_announcement' | 'returned' | string;
   budgetTotal5Years: number; // งบรวม 5 ปี
   department?: string;
   note?: string;
+  budgetByYear?: { [year: string]: number };
+  lastActionDate?: string; // วันที่ดำเนินการล่าสุด
 }
 
-export type TrackingStatus = 'not_started' | 'in_progress' | 'delayed' | 'completed';
+export type AuditLogCategory = 
+  | 'plan_approval'        // การอนุมัติและประกาศใช้แผน
+  | 'project_modification' // การเพิ่ม/แก้ไข/เปลี่ยนแปลง/ลบโครงการ
+  | 'budget'               // การอนุมัติงบประมาณ
+  | 'tracking'             // ติดตามประเมินผล
+  | 'system';              // การซิงค์และจัดการระบบ
+
+export interface PlanAuditLogEntry {
+  id: string;
+  timestamp: string; // วันที่-เวลา
+  planName: string; // แผนพัฒนาท้องถิ่น หรือชื่อโครงการ
+  action: 'อนุมัติ' | 'ประกาศใช้' | 'ส่งกลับแก้ไข' | 'เพิ่มโครงการ' | 'แก้ไขโครงการ' | 'เปลี่ยนแปลงโครงการ' | 'ลบโครงการ' | 'จัดสรรงบประมาณ' | 'ปลดล็อกงบประมาณ' | 'อัปเดตความก้าวหน้า' | string; // การดำเนินการ
+  category?: AuditLogCategory;
+  actorName: string; // ผู้ดำเนินการ
+  actorRole?: string; // บทบาท/ตำแหน่ง
+  department?: string; // หน่วยงานรับผิดชอบ
+  targetCode?: string; // รหัสอ้างอิง เช่น เลขที่โครงการ / เลขที่ประกาศ
+  details?: string; // รายละเอียดการเปลี่ยนแปลง
+  beforeValue?: string; // ข้อมูลเดิม (กรณีเปรียบเทียบ)
+  afterValue?: string; // ข้อมูลใหม่ (กรณีเปรียบเทียบ)
+  ipAddress?: string; // ช่องทางหรือ IP
+  note?: string; // หมายเหตุ (ถ้ามี)
+}
+
+export type TrackingStatus = 'not_started' | 'in_progress' | 'delayed' | 'completed' | 'cancelled';
 
 export interface ProjectTrackingItem {
   id: string;
@@ -118,6 +165,13 @@ export interface ProjectTrackingItem {
   contractDate?: string;
   startDate?: string;
   endDate?: string;
+  executionDate?: string;
+  progressSummary?: string;
+  obstacles?: string;
+  satisfactionLevel?: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  activityImages?: string[];
   responsiblePerson?: string;
   year: string;
   note?: string;
@@ -150,6 +204,8 @@ export interface VisitorLog {
 
 export type ActiveNavMenu = 
   | 'dashboard'
+  | 'citizen_portal'
+  | 'report_system'
   | 'edition_first'
   | 'edition_additional'
   | 'edition_changed'
@@ -161,7 +217,13 @@ export type ActiveNavMenu =
   | 'village_plan_report'
   | 'report_plan'
   | 'report_comparison'
-  | 'project_search';
+  | 'audit_log'
+  | 'data_management'
+  | 'login_screen'
+  | 'citizen_news'
+  | 'citizen_downloads'
+  | 'citizen_faq'
+  | 'citizen_contact';
 
-export { DEVELOPMENT_STRATEGIES, DEPARTMENTS, SILA_ZONES, ALL_VILLAGES } from './utils/constants';
+export { DEVELOPMENT_STRATEGIES, MUNICIPAL_STRATEGIES, DEPARTMENTS, SILA_ZONES, ALL_VILLAGES } from './utils/constants';
 export type { DevelopmentStrategy, Department, ZoneInfo, VillageInfo } from './utils/constants';

@@ -1018,24 +1018,244 @@ export const INITIAL_PROJECTS: ProjectData[] = [
   }
 ];
 
-export const INITIAL_ANNOUNCEMENTS: PlanAnnouncement[] = [
-  {
+const generateInitialAnnouncements = (): PlanAnnouncement[] => {
+  const list: PlanAnnouncement[] = [];
+
+  // =========================================================================
+  // ปีงบประมาณ 2571: เริ่มต้นด้วยฉบับแรก แล้วนับต่อเป็นครั้งที่ 2/2571, 3/2571, ...
+  // =========================================================================
+
+  // ลำดับ 1: ฉบับแรกสุด (ตั้งต้น) -> "ฉบับแรก/2571"
+  list.push({
     id: 'ANN-2571-001',
     orderNumber: 1,
-    planType: 'แผนพัฒนาท้องถิ่น เพิ่มเติม',
-    batchNumber: '2571-01-01',
+    planType: 'แผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575)',
+    batchNumber: 'ฉบับแรก/2571',
     year: '2571',
-    approvalDate: '02/09/2571',
-    effectiveDate: '02/09/2571',
-    announcementNo: 'ประกาศ ทม.ศิลา ที่ 12/2571',
+    approvalDate: '01/09/2571',
+    effectiveDate: '01/10/2571',
+    lastActionDate: '01/10/2571',
+    announcementNo: 'ประกาศ ทม.ศิลา เรื่อง ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575)',
     approver: 'นายกเทศมนตรีเมืองศิลา',
-    projectIds: ['PRJ-2571-004', 'PRJ-2571-001', 'PRJ-2571-005', 'PRJ-2571-006'],
-    status: 'approved',
-    budgetTotal5Years: 2800000,
+    projectIds: ['PRJ-2571-001', 'PRJ-2571-002', 'PRJ-2571-003'],
+    status: 'published',
+    budgetByYear: { '2571': 3450000, '2572': 850000, '2573': 600000, '2574': 500000, '2575': 500000 },
+    budgetTotal5Years: 5900000,
     department: 'กองยุทธศาสตร์และงบประมาณ',
-    note: 'ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) เพิ่มเติม ครั้งที่ 1 ประจำปีงบประมาณ พ.ศ. 2571'
+    note: 'แผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) ฉบับแรก ผ่านความเห็นชอบจากสภาเทศบาลเมืองศิลา'
+  });
+
+  // ลำดับ 2: เพิ่มเติม -> "ครั้งที่ 2/2571"
+  list.push({
+    id: 'ANN-2571-002',
+    orderNumber: 2,
+    planType: 'แผนพัฒนาท้องถิ่น เพิ่มเติม',
+    batchNumber: 'ครั้งที่ 2/2571',
+    year: '2571',
+    approvalDate: '15/10/2571',
+    effectiveDate: '15/10/2571',
+    lastActionDate: '15/10/2571',
+    announcementNo: 'ประกาศ ทม.ศิลา เรื่อง ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575) เพิ่มเติม ครั้งที่ 2/2571',
+    approver: 'นายกเทศมนตรีเมืองศิลา',
+    projectIds: ['PRJ-2571-004'],
+    status: 'published',
+    budgetByYear: { '2571': 950000, '2572': 300000, '2573': 0, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 1250000,
+    department: 'กองช่าง',
+    note: 'เพิ่มเติมโครงการโครงสร้างพื้นฐานเร่งด่วน ครั้งที่ 2/2571'
+  });
+
+  // ลำดับ 3: เพิ่มเติม -> "ครั้งที่ 3/2571"
+  list.push({
+    id: 'ANN-2571-003',
+    orderNumber: 3,
+    planType: 'แผนพัฒนาท้องถิ่น เพิ่มเติม',
+    batchNumber: 'ครั้งที่ 3/2571',
+    year: '2571',
+    approvalDate: '28/11/2571',
+    effectiveDate: '28/11/2571',
+    lastActionDate: '28/11/2571',
+    announcementNo: 'ประกาศ ทม.ศิลา เรื่อง ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575) เพิ่มเติม ครั้งที่ 3/2571',
+    approver: 'นายกเทศมนตรีเมืองศิลา',
+    projectIds: ['PRJ-2571-005'],
+    status: 'published',
+    budgetByYear: { '2571': 600000, '2572': 0, '2573': 0, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 600000,
+    department: 'กองสาธารณสุขและสิ่งแวดล้อม',
+    note: 'เพิ่มเติมโครงการส่งเสริมสุขภาพชุมชน ครั้งที่ 3/2571'
+  });
+
+  // ลำดับ 4 ถึง 25 ในปี 2571 (รันลำดับครั้งต่อเนื่อง 4/2571 ถึง 25/2571)
+  const types2571 = [
+    'แผนพัฒนาท้องถิ่น เปลี่ยนแปลง',
+    'แผนพัฒนาท้องถิ่น แก้ไข',
+    'แผนพัฒนาท้องถิ่น เพิ่มเติม',
+    'แผนพัฒนาท้องถิ่น เปลี่ยนแปลง',
+    'แผนพัฒนาท้องถิ่น แก้ไข'
+  ];
+
+  for (let seq = 4; seq <= 25; seq++) {
+    const type = types2571[(seq - 4) % types2571.length];
+    const numStr = seq.toString().padStart(2, '0');
+    const day = ((seq * 3) % 27) + 1;
+    const month = ((seq % 10) + 1);
+    const dateStr = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/2571`;
+    const b71 = 400000 + ((seq * 90000) % 1800000);
+    const b72 = (seq % 3 === 0) ? 250000 : 0;
+    const b73 = 0;
+
+    let itemStatus: 'published' | 'approved' | 'pending_approval' = 'published';
+    if (seq === 24) itemStatus = 'pending_approval';
+    if (seq === 25) itemStatus = 'approved';
+
+    list.push({
+      id: `ANN-2571-${numStr}`,
+      orderNumber: seq,
+      planType: type,
+      batchNumber: `ครั้งที่ ${seq}/2571`,
+      year: '2571',
+      approvalDate: dateStr,
+      effectiveDate: dateStr,
+      lastActionDate: dateStr,
+      announcementNo: itemStatus === 'pending_approval' ? 'ร่างประกาศ ทม.ศิลา' : `ประกาศ ทม.ศิลา ที่ ${30 + seq}/2571`,
+      approver: 'นายกเทศมนตรีเมืองศิลา',
+      projectIds: ['PRJ-2571-006', 'PRJ-2571-007'].slice(0, (seq % 2) + 1),
+      status: itemStatus,
+      budgetByYear: { '2571': b71, '2572': b72, '2573': b73, '2574': 0, '2575': 0 },
+      budgetTotal5Years: b71 + b72 + b73,
+      department: seq % 2 === 0 ? 'กองช่าง' : 'กองการศึกษา',
+      note: `${type} ตามมติคณะกรรมการพัฒนาท้องถิ่น ครั้งที่ ${seq}/2571`
+    });
   }
-];
+
+  // =========================================================================
+  // ปีงบประมาณ 2572: Reset นับลำดับใหม่เริ่มจาก ครั้งที่ 1/2572, 2/2572, 3/2572...
+  // =========================================================================
+
+  // ลำดับ 26: เปลี่ยนแปลง -> "ครั้งที่ 1/2572" (Reset เมื่อเปลี่ยนปี)
+  list.push({
+    id: 'ANN-2572-001',
+    orderNumber: 26,
+    planType: 'แผนพัฒนาท้องถิ่น เปลี่ยนแปลง',
+    batchNumber: 'ครั้งที่ 1/2572',
+    year: '2572',
+    approvalDate: '10/01/2572',
+    effectiveDate: '10/01/2572',
+    lastActionDate: '10/01/2572',
+    announcementNo: 'ประกาศ ทม.ศิลา เรื่อง ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575) เปลี่ยนแปลง ครั้งที่ 1/2572',
+    approver: 'นายกเทศมนตรีเมืองศิลา',
+    projectIds: ['PRJ-2571-006'],
+    status: 'published',
+    budgetByYear: { '2571': 0, '2572': 850000, '2573': 300000, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 1150000,
+    department: 'กองช่าง',
+    note: 'เปลี่ยนแปลงรายละเอียดและงบประมาณโครงการต้นปี 2572 ครั้งที่ 1/2572'
+  });
+
+  // ลำดับ 27: แก้ไข -> "ครั้งที่ 2/2572"
+  list.push({
+    id: 'ANN-2572-002',
+    orderNumber: 27,
+    planType: 'แผนพัฒนาท้องถิ่น แก้ไข',
+    batchNumber: 'ครั้งที่ 2/2572',
+    year: '2572',
+    approvalDate: '24/02/2572',
+    effectiveDate: '24/02/2572',
+    lastActionDate: '24/02/2572',
+    announcementNo: 'คำสั่ง ทม.ศิลา เรื่อง แก้ไขแผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575) แก้ไข ครั้งที่ 2/2572',
+    approver: 'นายกเทศมนตรีเมืองศิลา',
+    projectIds: ['PRJ-2571-007'],
+    status: 'published',
+    budgetByYear: { '2571': 0, '2572': 450000, '2573': 0, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 450000,
+    department: 'กองยุทธศาสตร์และงบประมาณ',
+    note: 'แก้ไขข้อความและสถานที่ดำเนินโครงการ ครั้งที่ 2/2572'
+  });
+
+  // ลำดับ 28: เพิ่มเติม -> "ครั้งที่ 3/2572"
+  list.push({
+    id: 'ANN-2572-003',
+    orderNumber: 28,
+    planType: 'แผนพัฒนาท้องถิ่น เพิ่มเติม',
+    batchNumber: 'ครั้งที่ 3/2572',
+    year: '2572',
+    approvalDate: '18/03/2572',
+    effectiveDate: '18/03/2572',
+    lastActionDate: '18/03/2572',
+    announcementNo: 'ประกาศ ทม.ศิลา เรื่อง ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575) เพิ่มเติม ครั้งที่ 3/2572',
+    approver: 'นายกเทศมนตรีเมืองศิลา',
+    projectIds: ['PRJ-2571-005'],
+    status: 'published',
+    budgetByYear: { '2571': 0, '2572': 1200000, '2573': 500000, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 1700000,
+    department: 'กองการศึกษา',
+    note: 'เพิ่มเติมโครงการสื่อการเรียนรู้ ครั้งที่ 3/2572'
+  });
+
+  // ลำดับ 29: รออนุมัติ -> "ครั้งที่ 4/2572"
+  list.push({
+    id: 'ANN-2572-004',
+    orderNumber: 29,
+    planType: 'แผนพัฒนาท้องถิ่น เพิ่มเติม',
+    batchNumber: 'ครั้งที่ 4/2572',
+    year: '2572',
+    approvalDate: '22/04/2572',
+    effectiveDate: '22/04/2572',
+    lastActionDate: '22/04/2572',
+    announcementNo: 'ร่างประกาศ ทม.ศิลา',
+    approver: 'สภาเทศบาลเมืองศิลา',
+    projectIds: ['PRJ-2571-008', 'PRJ-2571-009'],
+    status: 'pending_approval',
+    budgetByYear: { '2571': 0, '2572': 1650000, '2573': 800000, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 2450000,
+    department: 'กองช่าง',
+    note: 'บรรจุโครงการใหม่ อยู่ระหว่างเสนอสภาเทศบาลเมืองศิลาพิจารณาให้ความเห็นชอบ'
+  });
+
+  // ลำดับ 30: รออนุมัติ -> "ครั้งที่ 5/2572"
+  list.push({
+    id: 'ANN-2572-005',
+    orderNumber: 30,
+    planType: 'แผนพัฒนาท้องถิ่น เปลี่ยนแปลง',
+    batchNumber: 'ครั้งที่ 5/2572',
+    year: '2572',
+    approvalDate: '26/04/2572',
+    effectiveDate: '26/04/2572',
+    lastActionDate: '26/04/2572',
+    announcementNo: 'ร่างประกาศ ทม.ศิลา',
+    approver: 'นายกเทศมนตรีเมืองศิลา',
+    projectIds: ['PRJ-2571-004'],
+    status: 'pending_approval',
+    budgetByYear: { '2571': 0, '2572': 950000, '2573': 0, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 950000,
+    department: 'กองสวัสดิการสังคม',
+    note: 'เปลี่ยนแปลงงบประมาณโครงการ อยู่ระหว่างรอนายกเทศมนตรีลงนามอนุมัติ'
+  });
+
+  // ลำดับ 31: อนุมัติแล้ว (พร้อมประกาศใช้) -> "ครั้งที่ 6/2572"
+  list.push({
+    id: 'ANN-2572-006',
+    orderNumber: 31,
+    planType: 'แผนพัฒนาท้องถิ่น แก้ไข',
+    batchNumber: 'ครั้งที่ 6/2572',
+    year: '2572',
+    approvalDate: '02/05/2572',
+    effectiveDate: '02/05/2572',
+    lastActionDate: '02/05/2572',
+    announcementNo: 'คำสั่ง ทม.ศิลา',
+    approver: 'นายกเทศมนตรีเมืองศิลา',
+    projectIds: ['PRJ-2571-005'],
+    status: 'approved',
+    budgetByYear: { '2571': 0, '2572': 500000, '2573': 0, '2574': 0, '2575': 0 },
+    budgetTotal5Years: 500000,
+    department: 'กองสาธารณสุขและสิ่งแวดล้อม',
+    note: 'สภาเทศบาลฯ ให้ความเห็นชอบแล้ว อยู่ระหว่างรอนายกเทศมนตรีลงนามประกาศใช้'
+  });
+
+  return list;
+};
+
+export const INITIAL_ANNOUNCEMENTS: PlanAnnouncement[] = generateInitialAnnouncements();
 
 export const INITIAL_TRACKING_ITEMS: ProjectTrackingItem[] = [
   {
@@ -1044,20 +1264,25 @@ export const INITIAL_TRACKING_ITEMS: ProjectTrackingItem[] = [
     orderNumber: 1,
     code: 'ป.1-โยธา-001',
     name: 'โครงการก่อสร้างถนน คสล. บ้านโนนม่วง ซอย 5',
-    planStrategy: 'ประเด็นการพัฒนาที่ 1: การพัฒนาและปรับปรุงระบบสาธารณูปโภคและโครงสร้างพื้นฐานให้เอื้อต่อการคมนาคม รักษาสภาพแวดล้อมและการอยู่อาศัย',
+    planStrategy: 'การพัฒนาและปรับปรุงระบบสาธารณูปโภคและโครงสร้างพื้นฐานให้เอื้อต่อการคมนาคม รักษาสภาพแวดล้อมและการอยู่อาศัย',
     planCategory: 'แผนงานอุตสาหกรรมและการโยธา',
-    objective: 'เพื่ออำนวยความสะดวกในการสัญจรไปมาของประชาชน',
-    target: 'ก่อสร้างถนน 6 เมตร ยาว 20 เมตร',
+    objective: 'เพื่ออำนวยความสะดวกในการคมนาคมขนส่งและเพิ่มความปลอดภัยแก่ประชาชน',
+    target: 'ก่อสร้างถนน คสล. กว้าง 6.00 เมตร หนา 0.15 เมตร ยาว 2,500 เมตร',
     department: 'กองช่าง',
     responsiblePerson: 'กองช่าง',
     budgetSource: 'เทศบัญญัติงบประมาณรายจ่าย',
-    budgetApproved: 500000,
-    contractBudget: 480000,
-    disbursedAmount: 480000,
+    budgetApproved: 2000000,
+    contractBudget: 1980000,
+    disbursedAmount: 1980000,
     progressPercent: 100,
     status: 'completed',
     startDate: '2026-09-02',
     endDate: '2027-03-30',
+    executionDate: '2026-09-20',
+    progressSummary: 'เทผิวจราจรคอนกรีตเสริมเหล็กแล้วเสร็จ 100% พร้อมติดตั้งป้ายบอกทางและทาสีตีเส้นจราจรครบถ้วน คณะกรรมการได้ทำการตรวจรับพัสดุเรียบร้อยแล้ว',
+    obstacles: 'ช่วงเริ่มโครงการมีฝนตกชุกเล็กน้อย แต่ผู้รับจ้างสามารถเร่งรัดงานจนแล้วเสร็จตามกำหนดสัญญา',
+    satisfactionLevel: 'มากที่สุด (85% - 100%)',
+    attachmentName: 'ใบตรวจรับงานจ้าง_งวดสุดท้าย_ถนนโนนม่วง.pdf',
     year: '2571'
   },
   {
@@ -1066,7 +1291,7 @@ export const INITIAL_TRACKING_ITEMS: ProjectTrackingItem[] = [
     orderNumber: 2,
     code: 'ป.2-ศึกษา-001',
     name: 'โครงการพัฒนาศูนย์การเรียนรู้ดิจิทัลชุมชนและห้องสมุดอัจฉริยะเทศบาลเมืองศิลา',
-    planStrategy: 'ประเด็นการพัฒนาที่ 2: การยกระดับคุณภาพชีวิต ส่งเสริมความเข้มแข็งของชุมชน และความปลอดภัยในชีวิตและทรัพย์สิน',
+    planStrategy: '2. การส่งเสริมคุณภาพชีวิตและสังคม การศึกษา ศาสนา วัฒนธรรม และสาธารณสุข',
     planCategory: 'แผนงานการศึกษา',
     objective: 'เพื่อส่งเสริมการเข้าถึงองค์ความรู้และทักษะดิจิทัลของเด็ก เยาวชน และประชาชน',
     target: 'จัดซื้ออุปกรณ์คอมพิวเตอร์ 30 ชุด พร้อมระบบเครือข่ายและสื่อการเรียนรู้ออนไลน์',
@@ -1074,12 +1299,97 @@ export const INITIAL_TRACKING_ITEMS: ProjectTrackingItem[] = [
     responsiblePerson: 'กองการศึกษา',
     budgetSource: 'เทศบัญญัติงบประมาณรายจ่าย',
     budgetApproved: 850000,
-    contractBudget: 800000,
-    disbursedAmount: 360000,
-    progressPercent: 45,
+    contractBudget: 820000,
+    disbursedAmount: 410000,
+    progressPercent: 50,
     status: 'in_progress',
     startDate: '2026-09-02',
     endDate: '2028-09-30',
+    executionDate: '2026-09-24',
+    progressSummary: 'จัดซื้อและส่งมอบเครื่องคอมพิวเตอร์จำนวน 30 ชุดเรียบร้อย อยู่ระหว่างการเดินสายสัญญาณอินเทอร์เน็ตความเร็วสูงและอบรมเจ้าหน้าที่ดูแลระบบ',
+    obstacles: 'ระบบเครือข่ายไฟเบอร์ออปติกชุมชนรอการเชื่อมโยงจากผู้ให้บริการ คาดว่าจะแล้วเสร็จสัปดาห์หน้า',
+    satisfactionLevel: 'มาก (70% - 84%)',
+    attachmentName: 'ภาพถ่ายการตรวจรับอุปกรณ์คอมพิวเตอร์.jpg',
+    year: '2571'
+  },
+  {
+    id: 'TRK-2571-003',
+    projectId: 'PRJ-2571-003',
+    orderNumber: 3,
+    code: 'ป.1-โยธา-002',
+    name: 'โครงการติดตั้งไฟส่องสว่างพลังงานแสงอาทิตย์ (Solar Cell) รอบบึงหนองโคตร',
+    planStrategy: 'การพัฒนาและปรับปรุงระบบสาธารณูปโภคและโครงสร้างพื้นฐานให้เอื้อต่อการคมนาคม รักษาสภาพแวดล้อมและการอยู่อาศัย',
+    planCategory: 'แผนงานเคหะและชุมชน',
+    objective: 'เพื่อสร้างความปลอดภัยในชีวิตและทรัพย์สินของประชาชนที่มาออกกำลังกายและสัญจร',
+    target: 'ติดตั้งโคมไฟ Solar Cell 150W เสาสูง 6 เมตร จำนวน 80 จุด',
+    department: 'กองช่าง',
+    responsiblePerson: 'กองช่าง',
+    budgetSource: 'เทศบัญญัติงบประมาณรายจ่าย',
+    budgetApproved: 350000,
+    contractBudget: 0,
+    disbursedAmount: 0,
+    progressPercent: 0,
+    status: 'not_started',
+    startDate: '2026-09-15',
+    endDate: '2027-08-30',
+    executionDate: '2026-09-15',
+    progressSummary: 'อยู่ระหว่างจัดทำร่างขอบเขตของงาน (TOR) และเตรียมประกาศประกวดราคาจ้าง',
+    obstacles: '-',
+    satisfactionLevel: 'มากที่สุด (85% - 100%)',
+    year: '2571'
+  },
+  {
+    id: 'TRK-2571-004',
+    projectId: 'PRJ-2571-004',
+    orderNumber: 4,
+    code: 'ป.3-สวัสดิการ-001',
+    name: 'โครงการปรับปรุงภูมิทัศน์และสวนสุขภาพเฉลิมพระเกียรติ',
+    planStrategy: 'การพัฒนาและปรับปรุงระบบสาธารณูปโภคและโครงสร้างพื้นฐานให้เอื้อต่อการคมนาคม รักษาสภาพแวดล้อมและการอยู่อาศัย',
+    planCategory: 'แผนงานสร้างความเข้มแข็งของชุมชน',
+    objective: 'เพื่อปรับปรุงพื้นที่สาธารณะให้เป็นแหล่งพักผ่อนหย่อนใจและออกกำลังกาย',
+    target: 'ปรับปรุงภูมิทัศน์ ปลูกต้นไม้ ปูหญ้า และจัดทำลู่วิ่งยางสังเคราะห์',
+    department: 'กองสวัสดิการสังคม',
+    responsiblePerson: 'กองสวัสดิการสังคม',
+    budgetSource: 'เทศบัญญัติงบประมาณรายจ่าย',
+    budgetApproved: 950000,
+    contractBudget: 900000,
+    disbursedAmount: 450000,
+    progressPercent: 50,
+    status: 'in_progress',
+    startDate: '2026-09-10',
+    endDate: '2027-12-31',
+    executionDate: '2026-09-22',
+    progressSummary: 'ปรับหน้าดินและปูหญ้าเรียบร้อยแล้ว อยู่ระหว่างลงหินคลุกและเทพื้นยางสังเคราะห์สำหรับลู่วิ่ง',
+    obstacles: 'เครื่องจักรขนาดใหญ่เข้าพื้นที่ลำบากเนื่องจากติดทางแคบ แต่ได้ประสานงานแก้ไขแล้ว',
+    satisfactionLevel: 'มากที่สุด (85% - 100%)',
+    attachmentName: 'ภาพถ่ายความก้าวหน้าสวนสุขภาพ_งวดที่1.jpg',
+    year: '2571'
+  },
+  {
+    id: 'TRK-2571-006',
+    projectId: 'PRJ-2571-006',
+    orderNumber: 5,
+    code: 'ป.1-โยธา-003',
+    name: 'โครงการจัดหาเครื่องสูบน้ำและปรับปรุงระบบระบายน้ำป้องกันน้ำท่วม',
+    planStrategy: 'การพัฒนาและปรับปรุงระบบสาธารณูปโภคและโครงสร้างพื้นฐานให้เอื้อต่อการคมนาคม รักษาสภาพแวดล้อมและการอยู่อาศัย',
+    planCategory: 'แผนงานการพาณิชย์',
+    objective: 'เพื่อป้องกันและบรรเทาปัญหาน้ำท่วมขังในเขตชุมชนเมืองศิลา',
+    target: 'จัดซื้อเครื่องสูบน้ำแบบเคลื่อนที่ขนาด 12 นิ้ว 2 เครื่อง พร้อมท่อส่งน้ำ',
+    department: 'กองช่าง',
+    responsiblePerson: 'กองช่าง',
+    budgetSource: 'เทศบัญญัติงบประมาณรายจ่าย',
+    budgetApproved: 1200000,
+    contractBudget: 1180000,
+    disbursedAmount: 1180000,
+    progressPercent: 100,
+    status: 'completed',
+    startDate: '2026-09-05',
+    endDate: '2027-04-30',
+    executionDate: '2026-09-25',
+    progressSummary: 'รับมอบเครื่องสูบน้ำและทดสอบระบบการทำงานเรียบร้อยแล้ว พร้อมใช้งานในจุดเสี่ยงน้ำท่วม',
+    obstacles: 'ไม่มี',
+    satisfactionLevel: 'มากที่สุด (85% - 100%)',
+    attachmentName: 'เอกสารตรวจรับเครื่องสูบน้ำ.pdf',
     year: '2571'
   }
 ];

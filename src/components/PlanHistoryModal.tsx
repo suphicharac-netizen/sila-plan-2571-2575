@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Clock,
@@ -6,36 +6,49 @@ import {
   GitCompare,
   FileText,
   Table2,
-  Plus,
   Printer,
   Calendar,
   CheckCircle2,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  ArrowLeft,
+  ArrowRight,
+  Sparkles,
+  AlertCircle,
+  Tag,
+  Layers,
+  Edit3,
+  Check
 } from 'lucide-react';
 import { ProjectData, PlanEdition, UserAccount } from '../types';
 
 interface PlanHistoryModalProps {
   project: ProjectData | null;
+  allProjects?: ProjectData[];
   onClose: () => void;
   onOpenNewChange?: (project: ProjectData) => void;
   currentUser?: UserAccount | null;
   isPublic?: boolean;
 }
 
-interface ProjectVersionItem {
+export interface ProjectVersionItem {
   id: string;
   versionNumber: number;
+  editionType: PlanEdition; // 'first' | 'additional' | 'changed' | 'amended'
+  editionNumber?: number;
   editionName: string;
-  editionType: PlanEdition;
   editionBadge: string;
-  isInitial: boolean;
+  originTag?: string;
+  isOrigin: boolean;
+  isInitial: boolean; // Alias for backward compatibility
   date: string;
   approvedDate: string;
   approvalOrderNo: string;
   reason: string;
   changeSummary: string;
   name: string;
+  planStrategy?: string;
+  planCategory?: string;
   objective: string;
   target: string;
   budgetByYear: {
@@ -46,708 +59,1757 @@ interface ProjectVersionItem {
     '2575'?: number;
   };
   budgetTotal: number;
+  budgetSource?: string;
   expectedResults: string;
   department: string;
+  zone?: string;
+  village?: string;
+  originalProjectId?: string;
+  year?: string;
 }
 
 export const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({
   project,
+  allProjects = [],
   onClose,
   onOpenNewChange,
   currentUser,
   isPublic = false
 }) => {
-  if (!project) return null;
-
   const isPublicViewer = Boolean(isPublic || currentUser?.role === 'public');
 
   // Comparison toggle mode: 'previous' (ฉบับก่อนหน้า) or 'initial' (ฉบับตั้งต้น)
   const [compareMode, setCompareMode] = useState<'previous' | 'initial'>('previous');
-  const [selectedVersionId, setSelectedVersionId] = useState<string>('v-initial');
+  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
 
-  // Build versions list for this project
+  const yearsList = ['2571', '2572', '2573', '2574', '2575'] as const;
+
+  // ---------------------------------------------------------------------------
+  // 1. Version Construction Logic according to Local Plan Regulations
+  //    - Origin: 'first' (ฉบับแรก) or 'additional' (ฉบับเพิ่มเติม)
+  //    - Modifications: 'changed' (ฉบับเปลี่ยนแปลง ข้อ 22/1) or 'amended' (ฉบับแก้ไข ข้อ 21)
+  // ---------------------------------------------------------------------------
   const versions: ProjectVersionItem[] = useMemo(() => {
+    if (!project) return [];
     const list: ProjectVersionItem[] = [];
 
-    // 1. Initial Version (ฉบับตั้งต้น / ฉบับแรก)
-    const initialBudgetByYear =
-      project.edition === 'first'
-        ? project.budgetByYear || { '2571': project.budgetPlan || 500000 }
-        : project.originalBudgetByYear || {
-            '2571': project.originalBudgetPlan || project.budgetPlan || 500000
-          };
+    const isProjectOrigin = project.edition === 'first' || project.edition === 'additional';
 
-    const initialTotal =
-      project.edition === 'first'
-        ? project.budgetPlan || 500000
-        : project.originalBudgetPlan || project.budgetPlan || 500000;
-
-    const vInitial: ProjectVersionItem = {
-      id: 'v-initial',
-      versionNumber: 1,
-      editionName: 'ฉบับแรก',
-      editionType: 'first',
-      editionBadge: 'ฉบับแรก',
-      isInitial: true,
-      date: project.approvedDate || '2569-09-01',
-      approvedDate: project.approvedDate || '2569-09-01',
-      approvalOrderNo: project.approvalOrderNo || 'ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575)',
-      reason:
-        project.reason ||
-        'จัดทำแผนพัฒนาท้องถิ่น 5 ปี ตามระเบียบกระทรวงมหาดไทยฯ',
-      changeSummary: 'บรรจุในแผนพัฒนาท้องถิ่นฉบับแรก (ตั้งต้น)',
-      name:
+    if (isProjectOrigin) {
+      // Current project is an Origin Version (ฉบับตั้งต้นกำเนิดโครงการ)
+      const originYear = project.year || '2571';
+      const originBadge =
         project.edition === 'first'
-          ? project.name
-          : project.originalProjectName || project.name,
-      objective:
-        (project.edition === 'first'
-          ? project.objective
-          : project.originalObjective) ||
-        project.objective ||
-        'เพื่ออำนวยความสะดวก',
-      target:
-        (project.edition === 'first'
-          ? project.target
-          : project.originalTarget) ||
-        project.target ||
-        'ก่อสร้างถนน กว้าง4 เมตร ยาว 15 เมตร',
-      budgetByYear: initialBudgetByYear,
-      budgetTotal: initialTotal,
-      expectedResults: project.expectedResults || 'ประชาชนสัญจรได้',
-      department: project.department || 'กองช่าง'
-    };
+          ? 'บรรจุครั้งแรกในฉบับแรก'
+          : `เพิ่มเติม ครั้งที่ ${project.editionNumber || 1}/${originYear}`;
 
-    list.push(vInitial);
+      const originName =
+        project.edition === 'first'
+          ? 'ฉบับแรก (พ.ศ. 2571-2575)'
+          : `เพิ่มเติม ครั้งที่ ${project.editionNumber || 1}/${originYear}`;
 
-    // 2. If the current project is a changed / amended / additional edition, add it as subsequent version
-    if (project.edition !== 'first') {
-      let editionLabel = 'ฉบับเปลี่ยนแปลง ครั้งที่ 1';
-      let badgeLabel = 'ฉบับเปลี่ยนแปลง';
-      let summary = 'เปลี่ยนแปลงแบบรูปรายการและปรับแผนงบประมาณ';
-
-      if (project.edition === 'amended') {
-        editionLabel = `ฉบับแก้ไข ครั้งที่ ${project.editionNumber || 1}`;
-        badgeLabel = 'ฉบับแก้ไข';
-        summary = 'แก้ไขรายละเอียดเป้าหมายและข้อความโครงการ';
-      } else if (project.edition === 'additional') {
-        editionLabel = `ฉบับเพิ่มเติม ครั้งที่ ${project.editionNumber || 1}`;
-        badgeLabel = 'ฉบับเพิ่มเติม';
-        summary = 'บรรจุโครงการเพิ่มเติมตามความต้องการของประชาชน';
-      } else if (project.edition === 'changed') {
-        editionLabel = `ฉบับเปลี่ยนแปลง ครั้งที่ ${project.editionNumber || 1}`;
-        badgeLabel = 'ฉบับเปลี่ยนแปลง';
-        summary = 'เปลี่ยนแปลงแบบรูปรายการและงบประมาณให้สอดคล้องกับสภาพพื้นที่จริง';
-      }
-
-      const vCurrent: ProjectVersionItem = {
-        id: 'v-current',
-        versionNumber: 2,
-        editionName: editionLabel,
+      const originItem: ProjectVersionItem = {
+        id: `ver-origin-${project.id}`,
+        versionNumber: 1,
         editionType: project.edition,
-        editionBadge: badgeLabel,
-        isInitial: false,
-        date: project.approvedDate || '2569-09-02',
-        approvedDate: project.approvedDate || '2569-09-02',
+        editionNumber: project.editionNumber || 1,
+        editionName: originName,
+        editionBadge: originBadge,
+        originTag: originBadge,
+        isOrigin: true,
+        isInitial: true,
+        year: originYear,
+        date: project.approvedDate && project.approvedDate !== '-' ? project.approvedDate : '2569-09-01',
+        approvedDate: project.approvedDate || '2569-09-01',
         approvalOrderNo:
           project.approvalOrderNo ||
-          `ประกาศเทศบาลเมืองศิลา เรื่อง ${badgeLabel}แผนพัฒนาท้องถิ่น`,
+          (project.edition === 'first'
+            ? 'ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575)'
+            : `ประกาศใช้แผนพัฒนาท้องถิ่น ฉบับเพิ่มเติม ครั้งที่ ${project.editionNumber || 1}`),
         reason:
           project.reason ||
-          project.note ||
-          'ปรับปรุงรายการเพื่อให้ตรงตามวัตถุประสงค์และสภาพแวดล้อมปัจจุบัน',
-        changeSummary: summary,
+          (project.edition === 'first'
+            ? 'จัดทำแผนพัฒนาท้องถิ่น 5 ปี ตามระเบียบกระทรวงมหาดไทยฯ'
+            : 'บรรจุโครงการใหม่ตามระเบียบ มท. ว่าด้วยการจัดทำแผนพัฒนาของ อปท. (ฉบับเพิ่มเติม)'),
+        changeSummary:
+          project.edition === 'first'
+            ? 'บรรจุครั้งแรกในแผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575)'
+            : `บรรจุโครงการใหม่ในแผนพัฒนาท้องถิ่น (ฉบับเพิ่มเติม ครั้งที่ ${project.editionNumber || 1})`,
         name: project.name,
-        objective: project.objective || 'เพื่ออำนวยความสะดวก',
-        target: project.target || 'ก่อสร้างถนน กว้าง4 เมตร ยาว 15 เมตร',
-        budgetByYear: project.budgetByYear || {},
+        planStrategy: project.planStrategy,
+        planCategory: project.planCategory,
+        objective: project.objective || '-',
+        target: project.target || '-',
+        budgetByYear: project.budgetByYear || { '2571': project.budgetPlan || 0 },
         budgetTotal: project.budgetPlan || 0,
-        expectedResults: project.expectedResults || 'ประชาชนสัญจรได้',
-        department: project.department || 'กองช่าง'
+        budgetSource: project.budgetSource || 'เทศบาลเมืองศิลา',
+        expectedResults: project.expectedResults || '-',
+        department: project.department || '-',
+        zone: project.zone,
+        village: project.village,
+        originalProjectId: project.originalProjectId
       };
 
-      list.push(vCurrent);
+      list.push(originItem);
+
+      // Search for subsequent modification projects in allProjects (changed / amended)
+      const childModifications = allProjects.filter(
+        (p) =>
+          p.originalProjectId === project.id &&
+          (p.edition === 'changed' || p.edition === 'amended')
+      );
+
+      // Sort by orderNumber or editionNumber
+      childModifications.sort((a, b) => (a.editionNumber || 0) - (b.editionNumber || 0) || a.orderNumber - b.orderNumber);
+
+      childModifications.forEach((child, idx) => {
+        const modBadge =
+          child.edition === 'changed'
+            ? 'ฉบับเปลี่ยนแปลง (ข้อ 22/1)'
+            : 'ฉบับแก้ไข (ข้อ 21)';
+        const modName =
+          child.edition === 'changed'
+            ? `ฉบับเปลี่ยนแปลง ครั้งที่ ${child.editionNumber || 1}`
+            : `ฉบับแก้ไข ครั้งที่ ${child.editionNumber || 1}`;
+
+        list.push({
+          id: `ver-mod-${child.id}`,
+          versionNumber: idx + 2,
+          editionType: child.edition,
+          editionNumber: child.editionNumber || 1,
+          editionName: modName,
+          editionBadge: modBadge,
+          originTag: originBadge,
+          isOrigin: false,
+          isInitial: false,
+          date: child.approvedDate && child.approvedDate !== '-' ? child.approvedDate : '2569-09-02',
+          approvedDate: child.approvedDate || '2569-09-02',
+          approvalOrderNo:
+            child.approvalOrderNo ||
+            `ประกาศเทศบาลเมืองศิลา เรื่อง ${modBadge}`,
+          reason:
+            child.reason ||
+            child.note ||
+            (child.edition === 'changed'
+              ? 'เปลี่ยนแปลงแบบรูปรายการ/งบประมาณ ตามระเบียบฯ ข้อ 22/1'
+              : 'แก้ไขข้อความ/คำผิด และปรับปรุงรายละเอียดให้ถูกต้อง ตามระเบียบฯ ข้อ 21'),
+          changeSummary:
+            child.note ||
+            (child.edition === 'changed'
+              ? 'เปลี่ยนแปลงแบบรูปรายการและปรับแผนงบประมาณให้สอดคล้องกับสภาพพื้นที่จริง'
+              : 'แก้ไขรายละเอียดเป้าหมายและข้อความโครงการ'),
+          name: child.name,
+          planStrategy: child.planStrategy || project.planStrategy,
+          planCategory: child.planCategory || project.planCategory,
+          objective: child.objective || project.objective || '-',
+          target: child.target || project.target || '-',
+          budgetByYear: child.budgetByYear || {},
+          budgetTotal: child.budgetPlan || 0,
+          budgetSource: child.budgetSource || project.budgetSource || 'เทศบาลเมืองศิลา',
+          expectedResults: child.expectedResults || project.expectedResults || '-',
+          department: child.department || project.department || '-',
+          zone: child.zone || project.zone,
+          village: child.village || project.village,
+          originalProjectId: child.originalProjectId
+        });
+      });
+    } else {
+      // Current project is a Modification Version ('changed' or 'amended')
+      // Find its origin project from allProjects or reconstruct from original* fields
+      const originPrj = allProjects.find(
+        (p) => p.id === project.originalProjectId && (p.edition === 'first' || p.edition === 'additional')
+      );
+
+      const originEdition: PlanEdition = originPrj?.edition || (project.originalEdition as PlanEdition) || 'first';
+      const originEditionNum = originPrj?.editionNumber || 1;
+
+      const originYear = originPrj?.year || project.year || '2571';
+      const originBadge =
+        originEdition === 'first'
+          ? 'บรรจุครั้งแรกในฉบับแรก'
+          : `เพิ่มเติม ครั้งที่ ${originEditionNum}/${originYear}`;
+
+      const originName =
+        originEdition === 'first'
+          ? 'ฉบับแรก (พ.ศ. 2571-2575)'
+          : `เพิ่มเติม ครั้งที่ ${originEditionNum}/${originYear}`;
+
+      const initialBudgetByYear =
+        originPrj?.budgetByYear ||
+        project.originalBudgetByYear || {
+          '2571': originPrj?.budgetPlan || project.originalBudgetPlan || project.budgetPlan || 500000
+        };
+
+      const initialTotal =
+        originPrj?.budgetPlan || project.originalBudgetPlan || project.budgetPlan || 500000;
+
+      const originItem: ProjectVersionItem = {
+        id: originPrj ? `ver-origin-${originPrj.id}` : 'ver-origin-reconstructed',
+        versionNumber: 1,
+        editionType: originEdition,
+        editionNumber: originEditionNum,
+        editionName: originName,
+        editionBadge: originBadge,
+        originTag: originBadge,
+        isOrigin: true,
+        isInitial: true,
+        year: originYear,
+        date: originPrj?.approvedDate || project.originalApprovedDate || '2569-09-01',
+        approvedDate: originPrj?.approvedDate || project.originalApprovedDate || '2569-09-01',
+        approvalOrderNo:
+          originPrj?.approvalOrderNo ||
+          (originEdition === 'first'
+            ? 'ประกาศใช้แผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575)'
+            : `ประกาศใช้แผนพัฒนาท้องถิ่น ฉบับเพิ่มเติม ครั้งที่ ${originEditionNum}`),
+        reason:
+          originPrj?.reason ||
+          (originEdition === 'first'
+            ? 'จัดทำแผนพัฒนาท้องถิ่น 5 ปี ตามระเบียบกระทรวงมหาดไทยฯ'
+            : 'บรรจุโครงการใหม่ตามระเบียบ มท. ว่าด้วยการจัดทำแผนพัฒนาของ อปท. (ฉบับเพิ่มเติม)'),
+        changeSummary:
+          originEdition === 'first'
+            ? 'บรรจุครั้งแรกในแผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575)'
+            : `บรรจุโครงการใหม่ในแผนพัฒนาท้องถิ่น (ฉบับเพิ่มเติม ครั้งที่ ${originEditionNum})`,
+        name: originPrj?.name || project.originalProjectName || project.name,
+        planStrategy: originPrj?.planStrategy || project.originalPlanStrategy || project.planStrategy,
+        planCategory: originPrj?.planCategory || project.planCategory,
+        objective: originPrj?.objective || project.originalObjective || project.objective || '-',
+        target: originPrj?.target || project.originalTarget || project.target || '-',
+        budgetByYear: initialBudgetByYear,
+        budgetTotal: initialTotal,
+        budgetSource: originPrj?.budgetSource || project.budgetSource || 'เทศบาลเมืองศิลา',
+        expectedResults: originPrj?.expectedResults || project.originalExpectedResults || project.expectedResults || '-',
+        department: originPrj?.department || project.originalDepartment || project.department || '-',
+        zone: originPrj?.zone || project.zone,
+        village: originPrj?.village || project.village,
+        originalProjectId: originPrj?.id
+      };
+
+      list.push(originItem);
+
+      // Find all sibling modifications for this origin project (including this project)
+      const siblingModifications = allProjects.filter(
+        (p) =>
+          p.originalProjectId === (project.originalProjectId || originPrj?.id) &&
+          (p.edition === 'changed' || p.edition === 'amended')
+      );
+
+      // Make sure the current project is included even if not in allProjects list
+      if (!siblingModifications.some((p) => p.id === project.id)) {
+        siblingModifications.push(project);
+      }
+
+      siblingModifications.sort((a, b) => (a.editionNumber || 0) - (b.editionNumber || 0) || a.orderNumber - b.orderNumber);
+
+      siblingModifications.forEach((modPrj, idx) => {
+        const modBadge =
+          modPrj.edition === 'changed'
+            ? 'ฉบับเปลี่ยนแปลง (ข้อ 22/1)'
+            : 'ฉบับแก้ไข (ข้อ 21)';
+        const modName =
+          modPrj.edition === 'changed'
+            ? `ฉบับเปลี่ยนแปลง ครั้งที่ ${modPrj.editionNumber || 1}`
+            : `ฉบับแก้ไข ครั้งที่ ${modPrj.editionNumber || 1}`;
+
+        list.push({
+          id: `ver-mod-${modPrj.id}`,
+          versionNumber: idx + 2,
+          editionType: modPrj.edition,
+          editionNumber: modPrj.editionNumber || 1,
+          editionName: modName,
+          editionBadge: modBadge,
+          originTag: originBadge,
+          isOrigin: false,
+          isInitial: false,
+          date: modPrj.approvedDate && modPrj.approvedDate !== '-' ? modPrj.approvedDate : '2569-09-02',
+          approvedDate: modPrj.approvedDate || '2569-09-02',
+          approvalOrderNo:
+            modPrj.approvalOrderNo ||
+            `ประกาศเทศบาลเมืองศิลา เรื่อง ${modBadge}`,
+          reason:
+            modPrj.reason ||
+            modPrj.note ||
+            (modPrj.edition === 'changed'
+              ? 'เปลี่ยนแปลงแบบรูปรายการ/งบประมาณ ตามระเบียบฯ ข้อ 22/1'
+              : 'แก้ไขข้อความ/คำผิด และปรับปรุงรายละเอียดให้ถูกต้อง ตามระเบียบฯ ข้อ 21'),
+          changeSummary:
+            modPrj.note ||
+            (modPrj.edition === 'changed'
+              ? 'เปลี่ยนแปลงแบบรูปรายการและปรับแผนงบประมาณให้สอดคล้องกับสภาพพื้นที่จริง'
+              : 'แก้ไขรายละเอียดเป้าหมายและข้อความโครงการ'),
+          name: modPrj.name,
+          planStrategy: modPrj.planStrategy || project.planStrategy,
+          planCategory: modPrj.planCategory || project.planCategory,
+          objective: modPrj.objective || project.objective || '-',
+          target: modPrj.target || project.target || '-',
+          budgetByYear: modPrj.budgetByYear || {},
+          budgetTotal: modPrj.budgetPlan || 0,
+          budgetSource: modPrj.budgetSource || project.budgetSource || 'เทศบาลเมืองศิลา',
+          expectedResults: modPrj.expectedResults || project.expectedResults || '-',
+          department: modPrj.department || project.department || '-',
+          zone: modPrj.zone || project.zone,
+          village: modPrj.village || project.village,
+          originalProjectId: modPrj.originalProjectId
+        });
+      });
     }
 
     return list;
-  }, [project]);
+  }, [project, allProjects]);
 
-  // Selected Version to view
+  // Set default selected version when opened
+  useEffect(() => {
+    if (versions.length > 0) {
+      if (project?.edition === 'first' || project?.edition === 'additional') {
+        // Origin project -> select the origin version
+        setSelectedVersionId(versions[0].id);
+      } else {
+        // Modification project -> select its specific version node
+        const target = versions.find((v) => v.id === `ver-mod-${project?.id}`) || versions[versions.length - 1];
+        setSelectedVersionId(target.id);
+      }
+    }
+  }, [versions, project]);
+
+  // Currently selected version
   const currentVersion = useMemo(() => {
-    return versions.find((v) => v.id === selectedVersionId) || versions[0];
+    return versions.find((v) => v.id === selectedVersionId) || versions[0] || ({} as ProjectVersionItem);
   }, [versions, selectedVersionId]);
 
-  // Find previous or initial version for diff comparison
+  // Find origin version
+  const originVersion = useMemo(() => {
+    return versions.find((v) => v.isOrigin) || versions[0] || null;
+  }, [versions]);
+
+  // Dynamic label for change type (เปลี่ยนแปลง / แก้ไข)
+  const changeTypeLabel = useMemo(() => {
+    if (currentVersion.editionType === 'amended') return 'แก้ไข (ข้อ 21)';
+    if (currentVersion.editionType === 'changed') return 'เปลี่ยนแปลง (ข้อ 22/1)';
+    return 'เปลี่ยนแปลง / แก้ไข';
+  }, [currentVersion.editionType]);
+
+  // Find previous or origin version for diff comparison
   const { beforeVersion, beforeLabel, afterLabel } = useMemo(() => {
-    if (currentVersion.isInitial) {
+    if (!currentVersion || currentVersion.isOrigin) {
       return {
         beforeVersion: null,
-        beforeLabel: 'ฉบับก่อนหน้า',
-        afterLabel: 'ฉบับแรก'
+        beforeLabel: 'ฉบับตั้งต้น',
+        afterLabel: currentVersion?.editionName || 'ฉบับตั้งต้น'
       };
     }
 
     if (compareMode === 'initial') {
-      const initialVer = versions.find((v) => v.isInitial) || null;
       return {
-        beforeVersion: initialVer,
-        beforeLabel: 'ฉบับตั้งต้น',
+        beforeVersion: originVersion,
+        beforeLabel: originVersion?.editionName || 'ฉบับตั้งต้น',
         afterLabel: currentVersion.editionName
       };
     }
 
     // Default 'previous'
     const currentIndex = versions.findIndex((v) => v.id === currentVersion.id);
-    const prev = currentIndex > 0 ? versions[currentIndex - 1] : null;
+    const prev = currentIndex > 0 ? versions[currentIndex - 1] : originVersion;
     return {
       beforeVersion: prev,
       beforeLabel: prev ? prev.editionName : 'ฉบับก่อนหน้า',
       afterLabel: currentVersion.editionName
     };
-  }, [currentVersion, compareMode, versions]);
+  }, [currentVersion, compareMode, versions, originVersion]);
 
   // Budget difference calculation
   const budgetDiff = useMemo(() => {
-    const after = currentVersion.budgetTotal;
+    if (currentVersion.isOrigin) return 0;
+    const after = currentVersion?.budgetTotal || 0;
     const before = beforeVersion ? beforeVersion.budgetTotal : 0;
     return after - before;
   }, [currentVersion, beforeVersion]);
+
+  // List of modified fields between beforeVersion and currentVersion
+  const diffSummaryList = useMemo(() => {
+    if (currentVersion.isOrigin || !beforeVersion) return [];
+    const items: string[] = [];
+
+    if (currentVersion.name.trim() !== beforeVersion.name.trim()) {
+      items.push('ชื่อโครงการ');
+    }
+    if ((currentVersion.objective || '').trim() !== (beforeVersion.objective || '').trim()) {
+      items.push('วัตถุประสงค์');
+    }
+    if ((currentVersion.target || '').trim() !== (beforeVersion.target || '').trim()) {
+      items.push('เป้าหมาย (ผลผลิต)');
+    }
+
+    // Budget check
+    let hasBudgetChange = false;
+    let hasYearShift = false;
+    yearsList.forEach((yr) => {
+      const bAmt = beforeVersion.budgetByYear?.[yr] || 0;
+      const aAmt = currentVersion.budgetByYear?.[yr] || 0;
+      if (bAmt !== aAmt) {
+        hasBudgetChange = true;
+        if ((bAmt > 0 && aAmt === 0) || (bAmt === 0 && aAmt > 0)) {
+          hasYearShift = true;
+        }
+      }
+    });
+
+    if (hasYearShift) {
+      items.push('ย้ายปีดำเนินการ');
+    }
+    if (hasBudgetChange || currentVersion.budgetTotal !== beforeVersion.budgetTotal) {
+      items.push('งบประมาณรายปี');
+    }
+    if ((currentVersion.expectedResults || '').trim() !== (beforeVersion.expectedResults || '').trim()) {
+      items.push('ผลที่คาดว่าจะได้รับ');
+    }
+    if ((currentVersion.department || '').trim() !== (beforeVersion.department || '').trim()) {
+      items.push('หน่วยงานรับผิดชอบหลัก');
+    }
+
+    return items;
+  }, [currentVersion, beforeVersion]);
+
+  const [isPreviewPrint, setIsPreviewPrint] = useState(false);
 
   const handlePrint = () => {
     window.print();
   };
 
+  const handleClose = () => {
+    setIsPreviewPrint(false);
+    onClose();
+  };
+
   // Helper formatting for budget difference badge
   const renderDiffBadge = () => {
+    if (currentVersion.isOrigin) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span>ฉบับตั้งต้น ({currentVersion.editionBadge})</span>
+        </span>
+      );
+    }
     if (budgetDiff > 0) {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs">
+          <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
           <span>ผลต่างงบประมาณ:</span>
-          <span className="font-mono">↗ +{budgetDiff.toLocaleString()} บาท (เพิ่มขึ้น)</span>
+          <span className="font-mono font-bold">+{budgetDiff.toLocaleString()} บาท (เพิ่มขึ้น)</span>
         </span>
       );
     }
     if (budgetDiff < 0) {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-300 shadow-2xs">
+          <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
           <span>ผลต่างงบประมาณ:</span>
-          <span className="font-mono">↘ -{Math.abs(budgetDiff).toLocaleString()} บาท (ลดลง)</span>
+          <span className="font-mono font-bold">-{Math.abs(budgetDiff).toLocaleString()} บาท (ลดลง)</span>
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
         <span>ผลต่างงบประมาณ:</span>
-        <span className="font-mono">คงเดิม (0 บาท)</span>
+        <span className="font-mono font-medium">คงเดิม (0 บาท)</span>
       </span>
     );
   };
 
-  const yearsList = ['2571', '2572', '2573', '2574', '2575'] as const;
+  // ---------------------------------------------------------------------------
+  // ฟังก์ชันเรนเดอร์เอกสารสำหรับพิมพ์ประวัติโครงการ (Print Sheet & Print Preview)
+  // ---------------------------------------------------------------------------
+  const renderPrintSheet = (isInsidePreview = false) => {
+    const targetVer = currentVersion;
+    const isOrigin = targetVer.isOrigin;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-        {/* =========================================================================
-            1. MODAL HEADER (Dark Pine Green)
-        ========================================================================= */}
-        <div className="bg-[#0f2922] text-white px-5 py-3 sm:px-6 flex items-center justify-between border-b border-[#0a211b] shrink-0">
-          <div className="flex items-center gap-3.5 min-w-0">
-            {/* Square Emerald History Icon */}
-            <div className="w-11 h-11 rounded-xl bg-[#0b3d30] border border-emerald-600/30 flex items-center justify-center text-emerald-300 shrink-0 shadow-xs">
-              <History className="w-5 h-5" />
-            </div>
+    return (
+      <div
+        id="plan-history-print-sheet"
+        className={`bg-white text-black font-['Prompt',sans-serif] leading-snug print:w-full print:max-w-none print:p-0 print:m-0 print:border-none print:shadow-none ${
+          isInsidePreview
+            ? 'w-full max-w-[287mm] p-5 sm:p-6 shadow-2xl border border-slate-300 rounded-xs'
+            : 'w-full'
+        }`}
+      >
+        <style>{`
+          @media print {
+            @page {
+              size: A4 landscape !important;
+              margin: 8mm 10mm !important;
+            }
+          }
+        `}</style>
 
-            <div className="min-w-0">
-              {/* Badges Row */}
-              <div className="flex items-center flex-wrap gap-2 text-xs">
-                <span className="bg-[#063f31] text-emerald-300 border border-emerald-700/50 px-2.5 py-0.5 rounded-full font-medium">
-                  โครงการ #{project.orderNumber || 3}
-                </span>
+        {/* ตรงกลาง: หัวข้อหลัก "ประวัติโครงการ" ตัวหนาขนาดใหญ่ และสังกัดเทศบาล */}
+        <div className="text-center mb-2">
+          <h1 className="text-2xl font-bold text-black tracking-wide font-['Prompt',sans-serif]">
+            ประวัติโครงการ{!isOrigin ? ` (${changeTypeLabel})` : ''}
+          </h1>
+          <p className="text-[15px] text-black mt-0.5 font-['Prompt',sans-serif]">
+            แผนพัฒนาท้องถิ่น (พ.ศ. 2571 - 2575) เทศบาลเมืองศิลา อำเภอเมืองขอนแก่น จังหวัดขอนแก่น
+          </p>
+        </div>
 
-                <span className="bg-blue-600 text-white px-2.5 py-0.5 rounded-full font-medium shadow-2xs">
-                  {project.edition === 'first'
-                    ? 'ฉบับแรก'
-                    : project.edition === 'changed'
-                    ? 'ฉบับเปลี่ยนแปลง'
-                    : project.edition === 'amended'
-                    ? 'ฉบับแก้ไข'
-                    : 'ฉบับเพิ่มเติม'}
-                </span>
+        {/* ตารางข้อมูลฉบับ / สถานะ */}
+        <div className="mb-2">
+          <table className="w-full border-collapse border border-black text-[15px] bg-white text-black plan-history-table">
+            <thead>
+              <tr className="border-b border-black bg-white text-black">
+                {isOrigin ? (
+                  <th className="border border-black p-1 sm:p-1.5 text-center align-middle font-bold w-full text-black bg-white text-[16px]">
+                    {targetVer.editionType === 'first'
+                      ? `ข้อมูลฉบับแรก (พ.ศ. 2571 - 2575)`
+                      : `ข้อมูลฉบับแผน — เพิ่มเติม ครั้งที่ ${targetVer.editionNumber || 1}/${targetVer.year || project.year || '2571'}`}
+                  </th>
+                ) : (
+                  <>
+                    <th className="border border-black p-1 sm:p-1.5 text-center align-middle font-bold w-1/2 text-black bg-white text-[16px]">
+                      ข้อมูลเดิม ({beforeLabel})
+                    </th>
+                    <th className="border border-black p-1 sm:p-1.5 text-center align-middle font-bold w-1/2 text-black bg-white text-[16px]">
+                      การปรับปรุงแก้ไข ({targetVer.editionName})
+                    </th>
+                  </>
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              <tr className="bg-white">
+                {isOrigin ? (
+                  <td className="border border-black p-2 px-3 align-top leading-snug text-black bg-white">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div>
+                          <span className="font-bold">ฉบับแผน:</span>{' '}
+                          {targetVer.editionType === 'additional'
+                            ? `เพิ่มเติม ครั้งที่ ${targetVer.editionNumber || 1}/${targetVer.year || project.year || '2571'}`
+                            : targetVer.editionType === 'first'
+                            ? 'ฉบับแรก (พ.ศ. 2571 - 2575)'
+                            : targetVer.editionBadge}
+                        </div>
+                        <div>
+                          <span className="font-bold">วันที่มีผลบังคับใช้:</span> {targetVer.date || '-'}
+                        </div>
+                        <div>
+                          <span className="font-bold">วันที่อนุมัติ:</span> {targetVer.approvedDate || '-'}
+                        </div>
+                      </div>
+                      <div>
+                        <div>
+                          <span className="font-bold">มติ/เลขที่ประกาศ:</span> {targetVer.approvalOrderNo || '-'}
+                        </div>
+                        <div>
+                          <span className="font-bold">งบประมาณรวม 5 ปี:</span>{' '}
+                          <span className="font-mono font-bold">
+                            {targetVer.budgetTotal.toLocaleString()} บาท
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                ) : (
+                  <>
+                    {/* Before */}
+                    <td className="border border-black p-1.5 px-2 align-top leading-snug text-black bg-white">
+                      <div>
+                        <span className="font-bold">ฉบับ:</span> {beforeLabel}
+                      </div>
+                      <div>
+                        <span className="font-bold">วันที่มีผล:</span> {beforeVersion?.date || '-'}
+                      </div>
+                      <div>
+                        <span className="font-bold">วันที่อนุมัติ:</span> {beforeVersion?.approvedDate || '-'}
+                      </div>
+                      <div className="mt-0.5 font-bold">
+                        งบประมาณ:{' '}
+                        <span className="font-mono">
+                          {(beforeVersion?.budgetTotal || 0).toLocaleString()} บาท
+                        </span>
+                      </div>
+                    </td>
 
-                <span className="text-slate-300 font-light text-[11px] sm:text-xs">
-                  (มีประวัติการปรับปรุง {versions.length} ฉบับ)
-                </span>
-              </div>
+                    {/* After */}
+                    <td className="border border-black p-1.5 px-2 align-top leading-snug text-black bg-white">
+                      <div>
+                        <span className="font-bold">ฉบับ:</span> {targetVer.editionName} ({targetVer.editionBadge})
+                      </div>
+                      <div>
+                        <span className="font-bold">วันที่มีผล:</span> {targetVer.date || '-'}
+                      </div>
+                      <div>
+                        <span className="font-bold">วันที่อนุมัติ:</span> {targetVer.approvedDate || '-'}
+                      </div>
+                      <div className="mt-0.5 font-bold">
+                        งบประมาณ:{' '}
+                        <span className="font-mono">
+                          {targetVer.budgetTotal.toLocaleString()} บาท
+                        </span>
+                        {budgetDiff !== 0 && (
+                          <span className="ml-2 font-normal text-[13.5px]">
+                            (ผลต่าง:{' '}
+                            {budgetDiff > 0
+                              ? `+${budgetDiff.toLocaleString()}`
+                              : `-${Math.abs(budgetDiff).toLocaleString()}`}{' '}
+                            บาท)
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-              {/* Title */}
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-wide mt-1 truncate">
-                {project.name}
-              </h2>
-            </div>
+        {/* เหตุผลความจำเป็น */}
+        <div className="border border-black p-1.5 px-2.5 mb-2 bg-white text-[15px] leading-snug">
+          <div className="font-bold text-black mb-0.5 text-[16px]">
+            {isOrigin
+              ? 'ที่มาและความจำเป็นของโครงการ'
+              : `เหตุผลและความจำเป็นในการ${changeTypeLabel}`}
           </div>
-
-          {/* Right Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0 ml-3">
-            {/* Public viewer status badge or + บันทึกการเปลี่ยนแปลง/แก้ไขใหม่ */}
-            {isPublicViewer ? (
-              <span className="hidden sm:inline-flex items-center text-[11px] bg-[#022c22] text-emerald-300 border border-emerald-600/50 px-2.5 py-1 rounded-lg font-medium">
-                สิทธิ์ประชาชนทั่วไป (อ่านอย่างเดียว)
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onOpenNewChange) {
-                    onOpenNewChange(project);
-                  } else {
-                    alert(
-                      `บันทึกการเปลี่ยนแปลง/แก้ไขสำหรับ ${project.name}\nท่านสามารถใช้ฟังก์ชัน "แก้ไข/เปลี่ยนแปลงโครงการ" ในระบบเพื่อสร้างฉบับใหม่ได้`
-                    );
-                  }
-                }}
-                className="hidden sm:inline-flex items-center gap-1.5 bg-[#007a5e] hover:bg-[#006853] text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>บันทึกการเปลี่ยนแปลง/แก้ไขใหม่</span>
-              </button>
-            )}
-
-            {/* Print Icon Button */}
-            <button
-              type="button"
-              title="พิมพ์เอกสาร"
-              onClick={handlePrint}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <Printer className="w-4 h-4" />
-            </button>
-
-            {/* Close (X) Icon Button */}
-            <button
-              type="button"
-              title="ปิดหน้าต่าง"
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          <div className="text-black leading-snug">
+            {project.reason || targetVer.reason || '-'}
           </div>
         </div>
 
-        {/* =========================================================================
-            2. MODAL BODY (Scrollable)
-        ========================================================================= */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 bg-white text-slate-800">
-          {/* SECTION 1: ลำดับไทม์ไลน์และประวัติการเปลี่ยนแปลง/แก้ไข (Version History) */}
-          <section className="space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-slate-800 text-sm">
-                <Clock className="w-4 h-4 text-slate-500" />
-                <span>ลำดับไทม์ไลน์และประวัติการเปลี่ยนแปลง/แก้ไข (Version History)</span>
+        {/* ตารางแสดงข้อมูลรายละเอียด */}
+        {isOrigin ? (
+          /* ตารางรายละเอียดฉบับตั้งต้น (Single Table) */
+          <div className="mb-2">
+            <table className="w-full border-collapse border border-black text-[15px] bg-white text-black plan-history-table">
+              <thead>
+                <tr className="border-b border-black bg-white text-black">
+                  <th className="border border-black p-1.5 text-center font-bold w-[25%] bg-white text-black text-[16px]">
+                    หัวข้อข้อมูล
+                  </th>
+                  <th className="border border-black p-1.5 text-center font-bold w-[75%] bg-white text-black text-[16px]">
+                    รายละเอียดโครงการ
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white">
+                <tr className="border-b border-black">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">1. ยุทธศาสตร์และแผนงาน</td>
+                  <td className="border border-black p-1.5 px-2">{targetVer.planStrategy || '-'} / {targetVer.planCategory || '-'}</td>
+                </tr>
+                <tr className="border-b border-black">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">2. ชื่อโครงการ</td>
+                  <td className="border border-black p-1.5 px-2 font-bold">{targetVer.name}</td>
+                </tr>
+                <tr className="border-b border-black">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">3. วัตถุประสงค์</td>
+                  <td className="border border-black p-1.5 px-2">{targetVer.objective}</td>
+                </tr>
+                <tr className="border-b border-black">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">4. เป้าหมาย (ผลผลิต)</td>
+                  <td className="border border-black p-1.5 px-2">{targetVer.target}</td>
+                </tr>
+                <tr className="border-b border-black">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">
+                    5. งบประมาณ
+                  </td>
+                  <td className="border border-black p-0 align-top">
+                    <table className="w-full border-collapse border border-black text-[14px]">
+                      <thead>
+                        <tr className="border-b border-black bg-white">
+                          {yearsList.map((yr) => (
+                            <th key={yr} className="border border-black p-1 text-center font-bold">พ.ศ. {yr}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          {yearsList.map((yr) => (
+                            <td key={yr} className="border border-black p-1 text-center font-mono">
+                              {(targetVer.budgetByYear?.[yr] || 0) > 0
+                                ? (targetVer.budgetByYear?.[yr] || 0).toLocaleString()
+                                : '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+                <tr className="border-b border-black">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">6. ผลที่คาดว่าจะได้รับ</td>
+                  <td className="border border-black p-1.5 px-2">{targetVer.expectedResults}</td>
+                </tr>
+                <tr className="border-b border-black">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">7. หน่วยงานรับผิดชอบหลัก</td>
+                  <td className="border border-black p-1.5 px-2">{targetVer.department}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* ตารางเปรียบเทียบ Before / After (ฉบับเปลี่ยนแปลง / ฉบับแก้ไข) */
+          <div className="mb-2">
+            <table className="w-full border-collapse border border-black text-[15px] bg-white text-black plan-history-table">
+              <thead>
+                <tr className="border-b border-black bg-white text-black">
+                  <th className="border border-black p-1 sm:p-1.5 text-center font-bold w-[22%] bg-white text-black text-[16px]">
+                    รายละเอียด
+                  </th>
+                  <th className="border border-black p-1 sm:p-1.5 text-center font-bold w-[39%] bg-white text-black text-[16px]">
+                    ข้อมูลเดิมก่อนแก้ไข ({beforeLabel})
+                  </th>
+                  <th className="border border-black p-1 sm:p-1.5 text-center font-bold w-[39%] bg-white text-black text-[16px]">
+                    ข้อมูลหลังแก้ไข ({targetVer.editionName})
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white">
+                {/* ชื่อโครงการ */}
+                <tr className="border-b border-black bg-white">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">1. ชื่อโครงการ</td>
+                  <td className="border border-black p-1.5 px-2 align-top">{beforeVersion?.name || '-'}</td>
+                  <td className="border border-black p-1.5 px-2 align-top font-bold">
+                    {targetVer.name}
+                    {targetVer.name !== beforeVersion?.name && (
+                      <span className="ml-1 text-[13px] font-normal underline">(แก้ไข)</span>
+                    )}
+                  </td>
+                </tr>
+
+                {/* วัตถุประสงค์ */}
+                <tr className="border-b border-black bg-white">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">2. วัตถุประสงค์</td>
+                  <td className="border border-black p-1.5 px-2 align-top">{beforeVersion?.objective || '-'}</td>
+                  <td className="border border-black p-1.5 px-2 align-top">
+                    {targetVer.objective}
+                    {targetVer.objective !== beforeVersion?.objective && (
+                      <span className="ml-1 text-[13px] font-normal underline">(แก้ไข)</span>
+                    )}
+                  </td>
+                </tr>
+
+                {/* เป้าหมาย */}
+                <tr className="border-b border-black bg-white">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">3. เป้าหมาย (ผลผลิต)</td>
+                  <td className="border border-black p-1.5 px-2 align-top">{beforeVersion?.target || '-'}</td>
+                  <td className="border border-black p-1.5 px-2 align-top font-bold">
+                    {targetVer.target}
+                    {targetVer.target !== beforeVersion?.target && (
+                      <span className="ml-1 text-[13px] font-normal underline">(แก้ไข)</span>
+                    )}
+                  </td>
+                </tr>
+
+                {/* แผนงบประมาณ */}
+                <tr className="border-b border-black bg-white">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">
+                    4. แผนงบประมาณรายปี
+                    <div className="text-[12px] font-normal">(พ.ศ. 2571 - 2575)</div>
+                  </td>
+                  <td colSpan={2} className="border border-black p-0 align-top">
+                    <table className="w-full border-collapse border border-black text-[14px]">
+                      <thead>
+                        <tr className="border-b border-black bg-white">
+                          <th className="border border-black p-1 text-center font-bold w-[20%]">ปี พ.ศ.</th>
+                          <th className="border border-black p-1 text-center font-bold w-[40%]">เดิม ({beforeLabel})</th>
+                          <th className="border border-black p-1 text-center font-bold w-[40%]">ใหม่ ({targetVer.editionName})</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {yearsList.map((yr) => {
+                          const bAmt = beforeVersion?.budgetByYear?.[yr] || 0;
+                          const aAmt = targetVer.budgetByYear?.[yr] || 0;
+                          const diff = aAmt - bAmt;
+                          return (
+                            <tr key={yr} className="border-b border-black">
+                              <td className="border border-black p-1 text-center font-bold">{yr}</td>
+                              <td className="border border-black p-1 px-2 text-right font-mono">
+                                {bAmt > 0 ? bAmt.toLocaleString() : '-'}
+                              </td>
+                              <td className="border border-black p-1 px-2 text-right font-mono font-bold">
+                                {aAmt > 0 ? aAmt.toLocaleString() : '-'}
+                                {diff !== 0 && (
+                                  <span className="ml-1 text-[12px] font-normal">
+                                    ({diff > 0 ? `+${diff.toLocaleString()}` : `-${Math.abs(diff).toLocaleString()}`})
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="font-bold bg-white">
+                          <td className="border border-black p-1 text-center">รวม 5 ปี</td>
+                          <td className="border border-black p-1 px-2 text-right font-mono">
+                            {(beforeVersion?.budgetTotal || 0).toLocaleString()}
+                          </td>
+                          <td className="border border-black p-1 px-2 text-right font-mono font-bold">
+                            {targetVer.budgetTotal.toLocaleString()}
+                            {budgetDiff !== 0 && (
+                              <span className="ml-1 text-[12px] font-normal">
+                                ({budgetDiff > 0 ? `+${budgetDiff.toLocaleString()}` : `-${Math.abs(budgetDiff).toLocaleString()}`})
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+
+                {/* ผลที่คาดว่าจะได้รับ */}
+                <tr className="border-b border-black bg-white">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">5. ผลที่คาดว่าจะได้รับ</td>
+                  <td className="border border-black p-1.5 px-2 align-top">{beforeVersion?.expectedResults || '-'}</td>
+                  <td className="border border-black p-1.5 px-2 align-top">{targetVer.expectedResults}</td>
+                </tr>
+
+                {/* หน่วยงานรับผิดชอบหลัก */}
+                <tr className="bg-white">
+                  <td className="border border-black p-1.5 px-2 font-bold align-top">6. หน่วยงานรับผิดชอบ</td>
+                  <td className="border border-black p-1.5 px-2 align-top">{beforeVersion?.department || '-'}</td>
+                  <td className="border border-black p-1.5 px-2 align-top">{targetVer.department}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ท้ายเอกสาร: แสดงวันที่พิมพ์ */}
+        <div className="pt-1.5 flex justify-end items-center text-xs sm:text-[14px] text-black font-['Prompt',sans-serif]">
+          <span>
+            วันที่พิมพ์: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  if (!project) return null;
+
+  return (
+    <div
+      id="plan-history-modal-backdrop"
+      className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden print:p-0 print:bg-white print:static print:overflow-visible"
+    >
+      <div
+        id="plan-history-modal-container"
+        className={`bg-white rounded-2xl shadow-2xl ${
+          isPreviewPrint
+            ? 'max-w-[98vw] 2xl:max-w-[1400px] w-full'
+            : 'max-w-5xl w-full'
+        } max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150 print:border-none print:shadow-none print:max-h-none print:h-auto print:w-full print:rounded-none print:overflow-visible`}
+      >
+        {isPreviewPrint ? (
+          <div className="flex flex-col h-full overflow-hidden bg-slate-200/70 print:bg-white print:overflow-visible">
+            {/* Top Toolbar */}
+            <div className="shrink-0 px-4 sm:px-6 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between gap-3 z-10 print:hidden shadow-xs">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewPrint(false)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>ย้อนกลับ</span>
+                </button>
+                <div className="h-5 w-px bg-slate-300 hidden sm:block" />
+                <span className="font-bold text-slate-900 text-xs sm:text-sm md:text-base">
+                  ตัวอย่างก่อนพิมพ์ ประวัติโครงการ
+                </span>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  📑 แนวนอน (A4 Landscape)
+                </span>
               </div>
-              <span className="text-slate-400 hidden sm:inline text-xs">
-                คลิกเลือกฉบับเพื่อดูรายละเอียดและเปรียบเทียบ
-              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl cursor-pointer transition-all shadow-xs active:scale-95"
+                  title="สั่งพิมพ์หรือบันทึก PDF ทันที"
+                >
+                  <Printer className="w-4 h-4 text-white" />
+                  <span>พิมพ์ประวัติโครงการ</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="w-8 h-8 sm:w-9 sm:h-9 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg shadow-xs flex items-center justify-center transition-colors cursor-pointer p-0"
+                  title="ปิดหน้าต่าง"
+                  aria-label="ปิดหน้าต่าง"
+                >
+                  <X className="w-5 h-5 stroke-[2.2]" />
+                </button>
+              </div>
             </div>
 
-            {/* Timeline Cards Row */}
-            <div className="flex items-center gap-3 overflow-x-auto pb-2 pt-3">
-              {versions.map((ver) => {
-                const isSelected = ver.id === currentVersion.id;
+            {/* Scrollable Paper Container */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 flex flex-col items-center print:p-0 print:overflow-visible print:block">
+              {renderPrintSheet(true)}
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* =========================================================================
+                1. MODAL HEADER
+            ========================================================================= */}
+            <div className="bg-white text-slate-900 px-5 py-3.5 sm:px-6 flex items-center justify-between border-b border-slate-200 shrink-0 print:hidden">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0 shadow-2xs">
+                  <History className="w-5 h-5" />
+                </div>
 
-                return (
-                  <div key={ver.id} className="relative shrink-0">
-                    {/* Floating top badge for Initial Version */}
-                    {ver.isInitial && (
-                      <span className="absolute -top-2.5 right-4 bg-[#0284c7] text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-xs z-10">
-                        ฉบับตั้งต้น
+                <div className="min-w-0">
+                  <div className="flex items-center flex-wrap gap-2 text-xs">
+                    <span className="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-0.5 rounded-full font-medium">
+                      โครงการ #{project.orderNumber || 1}
+                    </span>
+
+                    {/* Origin Badge vs Modification Badge */}
+                    {project.edition === 'first' ? (
+                      <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-full font-bold shadow-2xs inline-flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-emerald-600" />
+                        <span>บรรจุครั้งแรกในฉบับแรก</span>
+                      </span>
+                    ) : project.edition === 'additional' ? (
+                      <span className="bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-0.5 rounded-full font-bold shadow-2xs inline-flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-600" />
+                        <span>เพิ่มเติม ครั้งที่ {project.editionNumber || 1}/{project.year || '2571'}</span>
+                      </span>
+                    ) : (
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full font-bold shadow-2xs border inline-flex items-center gap-1 ${
+                          project.edition === 'changed'
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : 'bg-blue-100 text-blue-800 border-blue-300'
+                        }`}
+                      >
+                        <Layers className="w-3 h-3" />
+                        <span>
+                          {project.edition === 'changed'
+                            ? `ฉบับเปลี่ยนแปลง ครั้งที่ ${project.editionNumber || 1} (ข้อ 22/1)`
+                            : `ฉบับแก้ไข ครั้งที่ ${project.editionNumber || 1} (ข้อ 21)`}
+                        </span>
                       </span>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedVersionId(ver.id)}
-                      className={`w-[210px] sm:w-[220px] rounded-xl p-3.5 text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-2 border-emerald-500 bg-white shadow-xs'
-                          : 'border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-slate-300'
-                      }`}
-                    >
-                      {/* Top row in card: Edition Badge + Name */}
-                      <div className="flex items-center gap-2">
-                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-md font-semibold">
-                          {ver.editionBadge}
-                        </span>
-                        <span className="text-xs font-semibold text-slate-800 truncate">
-                          {ver.editionName}
-                        </span>
-                      </div>
-
-                      {/* Date */}
-                      <div className="text-xs text-slate-500 mt-2.5 flex items-center gap-1.5">
-                        <span>📅</span>
-                        <span>{ver.date}</span>
-                      </div>
-
-                      {/* Budget */}
-                      <div className="flex items-center justify-between text-xs text-slate-600 mt-2.5 pt-2 border-t border-slate-100">
-                        <span>งบรวม:</span>
-                        <span className="font-bold text-slate-900 font-mono">
-                          {ver.budgetTotal.toLocaleString()} บ.
-                        </span>
-                      </div>
-                    </button>
+                    <span className="text-slate-500 font-normal text-[11px] sm:text-xs">
+                      (มีประวัติในระบบ {versions.length} เวอร์ชัน)
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </section>
 
-          {/* SECTION 2: เปรียบเทียบการเปลี่ยนแปลง (Diff controls) */}
-          <section className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1 border-t border-slate-100">
-            <div className="flex items-center flex-wrap gap-2.5">
-              <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                <GitCompare className="w-4 h-4 text-emerald-600" />
-                <span>เปรียบเทียบการเปลี่ยนแปลง:</span>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-1 truncate">
+                    ประวัติโครงการ: <span className="font-semibold text-slate-800">{project.name}</span>
+                  </h2>
+                </div>
               </div>
 
-              {/* Toggle Buttons */}
-              <div className="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+              <div className="flex items-center gap-2 shrink-0 ml-3">
                 <button
+                  id="btn-print-plan-history-modal"
                   type="button"
-                  onClick={() => setCompareMode('previous')}
-                  className={`px-3 py-1 rounded-md text-xs transition-colors cursor-pointer ${
-                    compareMode === 'previous'
-                      ? 'bg-white text-slate-800 font-semibold shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  onClick={handlePrint}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+                  title="พิมพ์เฉพาะเนื้อหาในหน้ารายละเอียดนี้ออกทางเครื่องพิมพ์"
                 >
-                  เทียบกับฉบับก่อนหน้า
+                  <Printer className="w-4 h-4" />
+                  <span>พิมพ์หน้านี้</span>
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => setCompareMode('initial')}
-                  className={`px-3 py-1 rounded-md text-xs transition-colors cursor-pointer ${
-                    compareMode === 'initial'
-                      ? 'bg-white text-slate-800 font-semibold shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  title="ปิดหน้าต่าง"
+                  aria-label="ปิดหน้าต่าง"
+                  onClick={handleClose}
+                  className="w-8 h-8 sm:w-9 sm:h-9 bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg shadow-xs flex items-center justify-center transition-colors cursor-pointer p-0"
                 >
-                  เทียบกับฉบับตั้งต้น
+                  <X className="w-5 h-5 stroke-[2.2]" />
                 </button>
               </div>
             </div>
 
-            {/* Difference Badge */}
-            <div>{renderDiffBadge()}</div>
-          </section>
+            {/* =========================================================================
+                2. MODAL BODY
+            ========================================================================= */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 bg-white text-slate-800 print:hidden">
+              {/* SECTION 1: ลำดับไทม์ไลน์ (Timeline UI) */}
+              <section className="space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 text-sm">
+                    <Clock className="w-4 h-4 text-emerald-600" />
+                    <span>ลำดับไทม์ไลน์</span>
+                  </div>
+                </div>
 
-          {/* SECTION 3: ข้อมูลการอนุมัติและเหตุผลความจำเป็น (Warm Yellow / Amber Box) */}
-          <section className="bg-[#fffdf5] border border-amber-200 rounded-xl p-4 text-xs space-y-3 shadow-2xs">
-            {/* Header row */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/60 pb-2.5">
-              <div className="flex items-center gap-2 text-amber-900 font-bold">
-                <FileText className="w-4 h-4 text-amber-600" />
-                <span>ข้อมูลการอนุมัติและเหตุผลความจำเป็น — {currentVersion.editionName}</span>
-              </div>
+                {/* Timeline Horizontal Track */}
+                <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 pt-2 scrollbar-thin">
+                  {versions.map((ver, index) => {
+                    const isSelected = ver.id === currentVersion.id;
 
-              <div className="text-amber-800 font-medium text-xs">
-                <span>วันที่อนุมัติ: </span>
-                <span className="font-semibold">{currentVersion.approvedDate}</span>
-                <span className="mx-2">|</span>
-                <span>มติ/คำสั่ง: </span>
-                <span className="font-semibold">{currentVersion.approvalOrderNo}</span>
-              </div>
-            </div>
-
-            {/* Reason input display */}
-            <div>
-              <div className="font-semibold text-amber-900 mb-1">
-                เหตุผลและความจำเป็นในการเปลี่ยนแปลง/แก้ไข:
-              </div>
-              <div className="bg-white border border-amber-200 rounded-lg p-2.5 text-slate-800 leading-relaxed font-normal">
-                {currentVersion.reason}
-              </div>
-            </div>
-
-            {/* Summary bullet points */}
-            <div>
-              <div className="font-semibold text-amber-900 mb-1">
-                สรุปจุดสำคัญที่มีการเปลี่ยนแปลง:
-              </div>
-              <div className="text-slate-800 font-normal pl-1">
-                • {currentVersion.changeSummary}
-              </div>
-            </div>
-          </section>
-
-          {/* SECTION 4: ตารางเปรียบเทียบรายละเอียดโครงการ (เดิม → ใหม่) */}
-          <section className="space-y-0 shadow-2xs rounded-xl overflow-hidden border border-slate-200">
-            {/* Navy Header Bar */}
-            <div className="bg-[#1e293b] text-white px-4 py-2.5 flex items-center justify-between text-xs font-medium">
-              <div className="flex items-center gap-2">
-                <Table2 className="w-4 h-4 text-emerald-400" />
-                <span className="font-semibold text-white">
-                  ตารางเปรียบเทียบรายละเอียดโครงการ (เดิม → ใหม่)
-                </span>
-              </div>
-              <div className="text-slate-300 text-xs">
-                เปรียบเทียบ:{' '}
-                <span className="text-slate-300 font-medium">{beforeLabel} → </span>
-                <span className="text-emerald-400 font-semibold">{afterLabel}</span>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto bg-white">
-              <table className="w-full border-collapse text-xs text-slate-700">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 font-semibold text-slate-700">
-                    <th className="py-2.5 px-4 text-left w-48 border-r border-slate-200">
-                      หัวข้อข้อมูล
-                    </th>
-                    <th className="py-2.5 px-4 text-left w-1/2 border-r border-slate-200">
-                      <div className="flex items-center">
-                        <span>โครงการเดิม (ก่อนการปรับปรุง)</span>
-                        <span className="ml-2 bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-normal">
-                          Before
-                        </span>
-                      </div>
-                    </th>
-                    <th className="py-2.5 px-4 text-left w-1/2">
-                      <div className="flex items-center">
-                        <span>โครงการที่เปลี่ยนแปลง / แก้ไข</span>
-                        <span className="ml-2 bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                          After (ใหม่)
-                        </span>
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {/* 1. ชื่อโครงการ */}
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
-                      <div className="flex items-center gap-1.5">
-                        <span>1. ชื่อโครงการ</span>
-                        {!isPublicViewer && (
-                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                            แก้ไข
-                          </span>
+                    return (
+                      <React.Fragment key={ver.id}>
+                        {/* Timeline Connector Arrow */}
+                        {index > 0 && (
+                          <div className="shrink-0 flex items-center text-slate-400">
+                            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 stroke-[2.2]" />
+                          </div>
                         )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
-                      {beforeVersion ? (
-                        <span className="font-medium text-slate-800">{beforeVersion.name}</span>
-                      ) : (
-                        <span className="text-slate-400 italic">- ไม่มีข้อมูลเดิม -</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-4 font-semibold text-slate-900 align-top">
-                      {currentVersion.name}
-                    </td>
-                  </tr>
 
-                  {/* 2. วัตถุประสงค์ */}
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
-                      <div className="flex items-center gap-1.5">
-                        <span>2. วัตถุประสงค์</span>
-                        {!isPublicViewer && (
-                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                            แก้ไข
+                        {/* Version Card Node */}
+                        <div className="relative shrink-0">
+                          {/* Top Floating Badge */}
+                          {ver.isOrigin ? (
+                            <span className="absolute -top-2.5 left-3 bg-emerald-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs z-10 flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              <span>จุดเริ่มต้นกำเนิดโครงการ</span>
+                            </span>
+                          ) : (
+                            <span className="absolute -top-2.5 left-3 bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs z-10 flex items-center gap-1">
+                              <Edit3 className="w-2.5 h-2.5" />
+                              <span>ฉบับปรับปรุงแก้ไข</span>
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedVersionId(ver.id)}
+                            className={`w-[230px] sm:w-[250px] rounded-xl p-3.5 pt-5 sm:pt-6 text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-2 border-emerald-600 bg-emerald-50/30 shadow-md ring-2 ring-emerald-400/30'
+                                : 'border border-slate-200 bg-slate-50/80 hover:bg-white hover:border-slate-300 hover:shadow-xs'
+                            }`}
+                          >
+                            {/* Card Header Badge */}
+                            <div className="flex items-center justify-between gap-1.5 mb-2 mt-0.5">
+                              <span
+                                className={`text-[11px] px-2 py-0.5 rounded-md font-bold whitespace-nowrap ${
+                                  ver.isOrigin
+                                    ? ver.editionType === 'first'
+                                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                                      : 'bg-purple-100 text-purple-900 border border-purple-200'
+                                    : ver.editionType === 'changed'
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                                    : 'bg-blue-100 text-blue-900 border border-blue-200'
+                                }`}
+                              >
+                                {ver.isOrigin
+                                  ? ver.editionType === 'first'
+                                    ? 'ฉบับแรก'
+                                    : 'ฉบับเพิ่มเติม'
+                                  : ver.editionType === 'changed'
+                                  ? 'ฉบับเปลี่ยนแปลง'
+                                  : 'ฉบับแก้ไข'}
+                              </span>
+
+                              {isSelected && (
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded shrink-0">
+                                  กำลังดู
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Edition Name */}
+                            <div className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
+                              {ver.editionType === 'additional'
+                                ? `เพิ่มเติม ครั้งที่ ${ver.editionNumber || 1}/${ver.year || project.year || '2571'}`
+                                : ver.editionName}
+                            </div>
+
+                            {/* Date */}
+                            <div className="text-[11px] text-slate-500 mt-2 flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>วันที่มีผล: {ver.date}</span>
+                            </div>
+
+                            {/* Budget summary */}
+                            <div className="flex items-center justify-between text-xs text-slate-600 mt-2 pt-2 border-t border-slate-200/80">
+                              <span className="text-[11px] text-slate-500">งบประมาณ:</span>
+                              <span className="font-bold text-slate-900 font-mono text-xs">
+                                {ver.budgetTotal.toLocaleString()} บ.
+                              </span>
+                            </div>
+                          </button>
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* SECTION 2: แถบสถานะ / ตัวเลือกเปรียบเทียบ */}
+              <section className="flex flex-wrap items-center justify-between gap-3 text-xs pt-2 border-t border-slate-100">
+                {!currentVersion.isOrigin ? (
+                  <div className="flex items-center flex-wrap gap-2.5">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                      <GitCompare className="w-4 h-4 text-emerald-600" />
+                      <span>การแสดงผลรายละเอียด:</span>
+                    </div>
+
+                    {/* Comparison mode toggles for modification editions */}
+                    <div className="inline-flex items-center gap-2">
+                      <div className="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                        <button
+                          type="button"
+                          onClick={() => setCompareMode('previous')}
+                          className={`px-3 py-1 rounded-md text-xs transition-colors cursor-pointer ${
+                            compareMode === 'previous'
+                              ? 'bg-white text-slate-900 font-bold shadow-2xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          เทียบกับฉบับก่อนหน้า ({beforeLabel})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCompareMode('initial')}
+                          className={`px-3 py-1 rounded-md text-xs transition-colors cursor-pointer ${
+                            compareMode === 'initial'
+                              ? 'bg-white text-slate-900 font-bold shadow-2xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          เทียบกับฉบับตั้งต้น ({originVersion?.editionName})
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div />
+                )}
+
+                {/* Status difference badge */}
+                <div className="ml-auto">{renderDiffBadge()}</div>
+              </section>
+
+              {/* SECTION 3: ข้อมูลการอนุมัติและเหตุผลความจำเป็น */}
+              <section
+                className={`rounded-xl p-4 text-xs space-y-3 shadow-2xs border ${
+                  currentVersion.isOrigin
+                    ? 'bg-emerald-50/40 border-emerald-200'
+                    : 'bg-[#fffdf5] border-amber-200'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 border-slate-200/60">
+                  <div
+                    className={`flex items-center gap-2 font-bold ${
+                      currentVersion.isOrigin ? 'text-emerald-900' : 'text-amber-900'
+                    }`}
+                  >
+                    <FileText
+                      className={`w-4 h-4 ${
+                        currentVersion.isOrigin ? 'text-emerald-600' : 'text-amber-600'
+                      }`}
+                    />
+                    <span>
+                      {currentVersion.isOrigin
+                        ? 'ข้อมูลการอนุมัติโครงการ'
+                        : `ข้อมูลการอนุมัติโครงการ — ${currentVersion.editionName}`}
+                    </span>
+                  </div>
+
+                  <div className="text-slate-700 font-medium text-xs">
+                    <span>วันที่อนุมัติ: </span>
+                    <span className="font-semibold text-slate-900">{currentVersion.approvedDate}</span>
+                    <span className="mx-2 text-slate-300">|</span>
+                    <span>มติ/คำสั่ง/ประกาศ: </span>
+                    <span className="font-semibold text-slate-900">{currentVersion.approvalOrderNo}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    className={`font-semibold mb-1 ${
+                      currentVersion.isOrigin ? 'text-emerald-900' : 'text-amber-900'
+                    }`}
+                  >
+                    {currentVersion.isOrigin
+                      ? 'ที่มาและความจำเป็นในการจัดทำโครงการ:'
+                      : `เหตุผลและความจำเป็นในการ${changeTypeLabel}:`}
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-lg p-2.5 text-slate-800 leading-relaxed font-normal shadow-2xs">
+                    {project.reason || currentVersion.reason || '-'}
+                  </div>
+                </div>
+              </section>
+
+              {/* SECTION 4: ตารางรายละเอียดโครงการ / ตารางเปรียบเทียบการเปลี่ยนแปลง (Diff Table) */}
+              {currentVersion.isOrigin ? (
+                /* -------------------------------------------------------------
+                   4.1 ตารางรายละเอียดโครงการแบบปกติ (กรณีเลือกดูฉบับตั้งต้น)
+                   ไม่ต้องแสดงตารางเปรียบเทียบ Before/After
+                ------------------------------------------------------------- */
+                <section className="space-y-0 shadow-2xs rounded-xl overflow-hidden border border-slate-200">
+                  <div className="bg-[#0f2e24] text-white px-4 py-3 flex items-center justify-between text-xs font-medium">
+                    <div className="flex items-center gap-2">
+                      <Table2 className="w-4 h-4 text-emerald-400" />
+                      <span className="font-bold text-white text-sm">
+                        รายละเอียดโครงการ
+                      </span>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 bg-emerald-900/60 px-3 py-1 rounded-md text-emerald-200 border border-emerald-700/50">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{currentVersion.editionBadge}</span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto bg-white">
+                    <table className="w-full border-collapse border border-slate-200 text-xs text-slate-900 bg-white">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-300 font-bold text-slate-800">
+                          <th className="py-2.5 px-4 text-left w-52 border border-slate-300 bg-slate-100">
+                            หัวข้อข้อมูล
+                          </th>
+                          <th className="py-2.5 px-4 text-left border border-slate-300 bg-slate-100">
+                            รายละเอียดโครงการ ({currentVersion.editionName})
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {/* 1. ยุทธศาสตร์และแผนงาน */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            1. ยุทธศาสตร์และแผนงาน
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-800 border border-slate-200 align-top leading-relaxed">
+                            <span className="font-semibold text-slate-900">ยุทธศาสตร์:</span>{' '}
+                            {currentVersion.planStrategy || '-'}{' '}
+                            <span className="mx-2 text-slate-400">|</span>
+                            <span className="font-semibold text-slate-900">แผนงาน:</span>{' '}
+                            {currentVersion.planCategory || '-'}
+                          </td>
+                        </tr>
+
+                        {/* 2. ชื่อโครงการ */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-3 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            2. ชื่อโครงการ
+                          </td>
+                          <td className="py-3 px-4 text-slate-900 border border-slate-200 align-top font-bold text-sm">
+                            {currentVersion.name}
+                          </td>
+                        </tr>
+
+                        {/* 3. วัตถุประสงค์ */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            3. วัตถุประสงค์
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-800 border border-slate-200 align-top leading-relaxed">
+                            {currentVersion.objective || '-'}
+                          </td>
+                        </tr>
+
+                        {/* 4. เป้าหมาย (ผลผลิต) */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            4. เป้าหมาย (ผลผลิตของโครงการ)
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-900 border border-slate-200 align-top leading-relaxed font-medium">
+                            {currentVersion.target || '-'}
+                          </td>
+                        </tr>
+
+                        {/* 5. งบประมาณ */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            5. งบประมาณ
+                          </td>
+                          <td className="p-0 border border-slate-200 align-top">
+                            <table className="w-full border-collapse text-xs">
+                              <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200 text-slate-700">
+                                  {yearsList.map((yr, idx) => (
+                                    <th
+                                      key={yr}
+                                      className={`py-2 px-3 text-center font-bold ${
+                                        idx < yearsList.length - 1 ? 'border-r border-slate-200' : ''
+                                      }`}
+                                    >
+                                      พ.ศ. {yr}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  {yearsList.map((yr, idx) => {
+                                    const amt = currentVersion.budgetByYear?.[yr] || 0;
+                                    return (
+                                      <td
+                                        key={yr}
+                                        className={`py-2.5 px-3 text-center font-mono text-slate-800 ${
+                                          idx < yearsList.length - 1 ? 'border-r border-slate-200' : ''
+                                        }`}
+                                      >
+                                        {amt > 0 ? amt.toLocaleString() : '-'}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+
+                        {/* 6. แหล่งที่มาของงบประมาณ */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            6. แหล่งที่มาของงบประมาณ
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-800 border border-slate-200 align-top">
+                            {currentVersion.budgetSource || '-'}
+                          </td>
+                        </tr>
+
+                        {/* 7. ผลที่คาดว่าจะได้รับ */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            7. ผลที่คาดว่าจะได้รับ
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-800 border border-slate-200 align-top leading-relaxed">
+                            {currentVersion.expectedResults || '-'}
+                          </td>
+                        </tr>
+
+                        {/* 8. หน่วยงานรับผิดชอบหลัก */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            8. หน่วยงานรับผิดชอบหลัก
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-900 border border-slate-200 align-top font-semibold">
+                            {currentVersion.department || '-'}
+                          </td>
+                        </tr>
+
+                        {/* 9. พื้นที่ดำเนินการ */}
+                        <tr className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            9. พื้นที่ดำเนินการ
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-800 border border-slate-200 align-top">
+                            {currentVersion.village || '-'} {currentVersion.zone ? `(${currentVersion.zone})` : ''}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ) : (
+                /* -------------------------------------------------------------
+                   4.2 ตารางเปรียบเทียบการเปลี่ยนแปลง (กรณีเลือกดูฉบับเปลี่ยนแปลง / ฉบับแก้ไข)
+                   แสดง 2 คอลัมน์ Before / After พร้อม Highlight ชัดเจน
+                ------------------------------------------------------------- */
+                <section className="space-y-0 shadow-2xs rounded-xl overflow-hidden border border-slate-200">
+                  {/* Top Bar with Diff Badges */}
+                  <div className="bg-[#1e293b] text-white px-4 py-3 flex items-center justify-between text-xs font-medium flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Table2 className="w-4 h-4 text-emerald-400" />
+                      <span className="font-bold text-white text-sm">
+                        ตารางเปรียบเทียบการเปลี่ยนแปลง (Before / After Comparison)
+                      </span>
+                    </div>
+                    <div className="text-slate-300 text-xs flex items-center gap-1.5 flex-wrap">
+                      <span>เปรียบเทียบ: </span>
+                      <span className="text-slate-200 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                        เดิม: {beforeLabel}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-300 font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700">
+                        ใหม่: {currentVersion.editionName}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Highlight indicators summary row */}
+                  {diffSummaryList.length > 0 ? (
+                    <div className="bg-amber-50/80 border-b border-amber-200 px-4 py-2 flex items-center gap-2 text-xs flex-wrap">
+                      <span className="font-bold text-amber-900 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                        <span>พบรายการที่มีการปรับปรุงแก้ไข ({diffSummaryList.length} จุด):</span>
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {diffSummaryList.map((item) => (
+                          <span
+                            key={item}
+                            className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md font-semibold text-[11px]"
+                          >
+                            ✓ {item}
                           </span>
-                        )}
+                        ))}
                       </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
-                      {beforeVersion?.objective || '-'}
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-800 align-top">
-                      {currentVersion.objective || '-'}
-                    </td>
-                  </tr>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 text-xs text-slate-600">
+                      <span>ไม่พบการเปลี่ยนแปลงรายละเอียดสำคัญ (ข้อมูลตรงกันกับฉบับก่อนหน้า)</span>
+                    </div>
+                  )}
 
-                  {/* 3. เป้าหมาย (ผลผลิตของโครงการ) */}
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
-                      <div className="flex items-center gap-1.5">
-                        <span>3. เป้าหมาย (ผลผลิตของโครงการ)</span>
-                        {!isPublicViewer && (
-                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                            แก้ไข
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
-                      {beforeVersion?.target || '-'}
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-800 align-top">
-                      {currentVersion.target || '-'}
-                    </td>
-                  </tr>
-
-                  {/* 4. งบประมาณรายปี (พ.ศ. 2571 - 2575) Nested Subtable */}
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
-                      <span>4. งบประมาณรายปี (พ.ศ. 2571 - 2575)</span>
-                    </td>
-                    <td colSpan={2} className="p-0 align-top">
-                      <table className="w-full border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-600 font-semibold">
-                            <th className="py-1.5 px-3 text-left w-24">ปี พ.ศ.</th>
-                            <th className="py-1.5 px-3 text-right">เดิม (บาท)</th>
-                            <th className="py-1.5 px-3 text-right">ใหม่ (บาท)</th>
-                            <th className="py-1.5 px-3 text-right">ผลต่าง (+/-)</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {yearsList.map((yr) => {
-                            const beforeAmount = beforeVersion?.budgetByYear?.[yr];
-                            const afterAmount = currentVersion.budgetByYear?.[yr];
-                            const diff = (afterAmount || 0) - (beforeAmount || 0);
-
-                            return (
-                              <tr key={yr} className="hover:bg-slate-50/40">
-                                <td className="py-1.5 px-3 font-semibold text-slate-700">
-                                  {yr}
-                                </td>
-                                <td className="py-1.5 px-3 text-right text-slate-600 font-mono">
-                                  {beforeAmount !== undefined && beforeAmount > 0
-                                    ? beforeAmount.toLocaleString()
-                                    : '-'}
-                                </td>
-                                <td className="py-1.5 px-3 text-right font-bold text-slate-900 font-mono">
-                                  {afterAmount !== undefined && afterAmount > 0
-                                    ? afterAmount.toLocaleString()
-                                    : '-'}
-                                </td>
-                                <td className="py-1.5 px-3 text-right font-mono">
-                                  {diff > 0 ? (
-                                    <span className="text-emerald-600 font-bold">
-                                      +{diff.toLocaleString()}
+                  {/* 2-Column Diff Table */}
+                  <div className="overflow-x-auto bg-white">
+                    <table className="w-full border-collapse border border-slate-200 text-xs text-slate-900 bg-white">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-300 font-bold text-slate-800">
+                          <th className="py-2.5 px-4 text-left w-48 border border-slate-300 bg-slate-100">
+                            หัวข้อข้อมูล
+                          </th>
+                          <th className="py-2.5 px-4 text-left w-[41%] border border-slate-300 bg-slate-100">
+                            <div className="flex items-center justify-between">
+                              <span>ข้อมูลเดิมก่อนแก้ไข (Before)</span>
+                              <span className="text-[11px] font-normal text-slate-500">[{beforeLabel}]</span>
+                            </div>
+                          </th>
+                          <th className="py-2.5 px-4 text-left w-[41%] border border-slate-300 bg-slate-100">
+                            <div className="flex items-center justify-between">
+                              <span className="text-emerald-950 font-bold">ข้อมูลหลังแก้ไข (After)</span>
+                              <span className="text-[11px] font-semibold text-emerald-700">[{currentVersion.editionName}]</span>
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {/* 1. ชื่อโครงการ */}
+                        {(() => {
+                          const isChanged = currentVersion.name.trim() !== (beforeVersion?.name || '').trim();
+                          return (
+                            <tr className={isChanged ? 'bg-amber-50/30' : 'hover:bg-slate-50/50'}>
+                              <td className="py-3 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                                <div className="flex items-center justify-between">
+                                  <span>1. ชื่อโครงการ</span>
+                                  {isChanged && (
+                                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
+                                      แก้ไข
                                     </span>
-                                  ) : diff < 0 ? (
-                                    <span className="text-red-600 font-bold">
-                                      -{Math.abs(diff).toLocaleString()}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400">คงเดิม</span>
                                   )}
-                                </td>
-                              </tr>
-                            );
-                          })}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 border border-slate-200 align-top font-medium">
+                                {beforeVersion?.name || '-'}
+                              </td>
+                              <td className="py-3 px-4 border border-slate-200 align-top font-bold text-slate-950">
+                                {isChanged ? (
+                                  <div className="p-2 rounded-lg bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs">
+                                    <div className="text-[11px] text-amber-800 font-semibold mb-0.5">
+                                      [ข้อความใหม่ที่ปรับปรุง]:
+                                    </div>
+                                    <div className="text-sm font-bold">{currentVersion.name}</div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between">
+                                    <span>{currentVersion.name}</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">[คงเดิม]</span>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })()}
 
-                          {/* Summary row (รวม 5 ปี) */}
-                          <tr className="bg-slate-50 font-semibold border-t border-slate-200">
-                            <td className="py-2 px-3 text-slate-900">รวม 5 ปี</td>
-                            <td className="py-2 px-3 text-right text-slate-700 font-mono">
-                              {beforeVersion && beforeVersion.budgetTotal > 0
-                                ? beforeVersion.budgetTotal.toLocaleString()
-                                : '-'}
-                            </td>
-                            <td className="py-2 px-3 text-right font-bold text-slate-900 font-mono">
-                              {currentVersion.budgetTotal > 0
-                                ? currentVersion.budgetTotal.toLocaleString()
-                                : '-'}
-                            </td>
-                            <td className="py-2 px-3 text-right font-mono">
+                        {/* 2. วัตถุประสงค์ */}
+                        {(() => {
+                          const isChanged = (currentVersion.objective || '').trim() !== (beforeVersion?.objective || '').trim();
+                          return (
+                            <tr className={isChanged ? 'bg-amber-50/30' : 'hover:bg-slate-50/50'}>
+                              <td className="py-3 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                                <div className="flex items-center justify-between">
+                                  <span>2. วัตถุประสงค์</span>
+                                  {isChanged && (
+                                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
+                                      แก้ไข
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 border border-slate-200 align-top leading-relaxed">
+                                {beforeVersion?.objective || '-'}
+                              </td>
+                              <td className="py-3 px-4 border border-slate-200 align-top leading-relaxed">
+                                {isChanged ? (
+                                  <div className="p-2 rounded-lg bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs font-medium">
+                                    {currentVersion.objective}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-800">{currentVersion.objective}</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">[คงเดิม]</span>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })()}
+
+                        {/* 3. เป้าหมาย (ผลผลิตของโครงการ) */}
+                        {(() => {
+                          const isChanged = (currentVersion.target || '').trim() !== (beforeVersion?.target || '').trim();
+                          return (
+                            <tr className={isChanged ? 'bg-amber-50/30' : 'hover:bg-slate-50/50'}>
+                              <td className="py-3 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                                <div className="flex items-center justify-between">
+                                  <span>3. เป้าหมาย (ผลผลิต)</span>
+                                  {isChanged && (
+                                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
+                                      แก้ไข
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 border border-slate-200 align-top leading-relaxed">
+                                {beforeVersion?.target || '-'}
+                              </td>
+                              <td className="py-3 px-4 border border-slate-200 align-top leading-relaxed">
+                                {isChanged ? (
+                                  <div className="p-2.5 rounded-lg bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs">
+                                    <div className="text-[11px] text-amber-800 font-bold mb-0.5">
+                                      [ปรับเปลี่ยนเป้าหมาย/ปริมาณงาน]:
+                                    </div>
+                                    <div className="font-bold">{currentVersion.target}</div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-800">{currentVersion.target}</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">[คงเดิม]</span>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })()}
+
+                        {/* 4. งบประมาณ Subtable */}
+                        <tr>
+                          <td className="py-3 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                            <span>4. งบประมาณ</span>
+                            <div className="mt-2">
                               {budgetDiff > 0 ? (
-                                <span className="text-emerald-600 font-bold">
-                                  +{budgetDiff.toLocaleString()}
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-300">
+                                  งบเพิ่ม +{budgetDiff.toLocaleString()}
                                 </span>
                               ) : budgetDiff < 0 ? (
-                                <span className="text-red-600 font-bold">
-                                  -{Math.abs(budgetDiff).toLocaleString()}
+                                <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-1.5 py-0.5 rounded border border-rose-300">
+                                  งบลด -{Math.abs(budgetDiff).toLocaleString()}
                                 </span>
                               ) : (
-                                <span className="text-slate-400">คงเดิม</span>
+                                <span className="text-[10px] bg-slate-100 text-slate-600 font-medium px-1.5 py-0.5 rounded">
+                                  งบรวมคงเดิม
+                                </span>
                               )}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
+                            </div>
+                          </td>
+                          <td colSpan={2} className="p-0 border border-slate-200 align-top">
+                            <table className="w-full border-collapse text-xs">
+                              <thead>
+                                <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold">
+                                  <th className="py-2 px-3 text-left w-20 border-r border-slate-200">ปี พ.ศ.</th>
+                                  <th className="py-2 px-3 text-right border-r border-slate-200 w-[35%]">
+                                    เดิม: {beforeLabel} (บาท)
+                                  </th>
+                                  <th className="py-2 px-3 text-right border-r border-slate-200 w-[35%] bg-amber-50/40 text-amber-950 font-bold">
+                                    ใหม่: {currentVersion.editionName} (บาท)
+                                  </th>
+                                  <th className="py-2 px-3 text-right font-bold w-[25%]">ผลต่าง (+/-)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {yearsList.map((yr) => {
+                                  const beforeAmount = beforeVersion?.budgetByYear?.[yr] || 0;
+                                  const afterAmount = currentVersion.budgetByYear?.[yr] || 0;
+                                  const diff = afterAmount - beforeAmount;
+                                  const isYearShift =
+                                    (beforeAmount > 0 && afterAmount === 0) ||
+                                    (beforeAmount === 0 && afterAmount > 0);
+                                  const isAmountChanged = diff !== 0;
 
-                  {/* 5. ผลที่คาดว่าจะได้รับ */}
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
-                      <div className="flex items-center gap-1.5">
-                        <span>5. ผลที่คาดว่าจะได้รับ</span>
-                        {!isPublicViewer && (
-                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                            แก้ไข
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
-                      {beforeVersion?.expectedResults || '-'}
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-800 align-top">
-                      {currentVersion.expectedResults || '-'}
-                    </td>
-                  </tr>
+                                  return (
+                                    <tr
+                                      key={yr}
+                                      className={`border-b border-slate-200 ${
+                                        isAmountChanged ? 'bg-amber-50/40' : 'hover:bg-slate-50/50'
+                                      }`}
+                                    >
+                                      <td className="py-2 px-3 font-bold text-slate-800 border-r border-slate-200">
+                                        {yr}
+                                      </td>
+                                      <td className="py-2 px-3 text-right text-slate-700 font-mono border-r border-slate-200">
+                                        {beforeAmount > 0 ? beforeAmount.toLocaleString() : '-'}
+                                      </td>
+                                      <td className="py-2 px-3 text-right font-mono border-r border-slate-200">
+                                        {isAmountChanged ? (
+                                          <div className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-950 font-bold px-2 py-0.5 rounded border border-amber-300">
+                                            <span>{afterAmount > 0 ? afterAmount.toLocaleString() : '-'}</span>
+                                            {isYearShift && (
+                                              <span className="text-[10px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-normal">
+                                                {afterAmount > 0 ? 'ย้ายมาปีนี้' : 'ย้ายออก'}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-slate-800 font-medium">
+                                            {afterAmount > 0 ? afterAmount.toLocaleString() : '-'}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="py-2 px-3 text-right font-mono">
+                                        {diff > 0 ? (
+                                          <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px]">
+                                            +{diff.toLocaleString()}
+                                          </span>
+                                        ) : diff < 0 ? (
+                                          <span className="text-rose-700 font-bold bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded text-[11px]">
+                                            -{Math.abs(diff).toLocaleString()}
+                                          </span>
+                                        ) : (
+                                          <span className="text-slate-400 font-normal">คงเดิม (0)</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
 
-                  {/* 6. หน่วยงานรับผิดชอบหลัก */}
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-4 font-semibold text-slate-800 bg-slate-50/40 border-r border-slate-200 align-top">
-                      <div className="flex items-center gap-1.5">
-                        <span>6. หน่วยงานรับผิดชอบหลัก</span>
-                        {!isPublicViewer && (
-                          <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-medium">
-                            แก้ไข
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-600 border-r border-slate-200 align-top">
-                      {beforeVersion?.department || '-'}
-                    </td>
-                    <td className="py-2.5 px-4 text-slate-800 align-top">
-                      {currentVersion.department || '-'}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                                {/* Total 5-year budget row */}
+                                <tr className="bg-slate-100/90 font-bold border-t-2 border-slate-300">
+                                  <td className="py-2.5 px-3 text-slate-900 border-r border-slate-200 font-bold">
+                                    รวม 5 ปี
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right text-slate-800 font-mono border-r border-slate-200 font-bold">
+                                    {(beforeVersion?.budgetTotal || 0).toLocaleString()}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-mono border-r border-slate-200 font-bold">
+                                    {budgetDiff !== 0 ? (
+                                      <span className="bg-amber-100 text-amber-950 font-bold px-2 py-0.5 rounded border border-amber-300 inline-block text-xs">
+                                        {currentVersion.budgetTotal.toLocaleString()}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-900 font-bold">
+                                        {currentVersion.budgetTotal.toLocaleString()}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right font-mono">
+                                    {budgetDiff > 0 ? (
+                                      <span className="text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded text-xs">
+                                        +{budgetDiff.toLocaleString()}
+                                      </span>
+                                    ) : budgetDiff < 0 ? (
+                                      <span className="text-rose-800 font-bold bg-rose-100 border border-rose-300 px-2 py-0.5 rounded text-xs">
+                                        -{Math.abs(budgetDiff).toLocaleString()}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-500 font-semibold">คงเดิม (0)</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+
+                        {/* 5. ผลที่คาดว่าจะได้รับ */}
+                        {(() => {
+                          const isChanged =
+                            (currentVersion.expectedResults || '').trim() !==
+                            (beforeVersion?.expectedResults || '').trim();
+                          return (
+                            <tr className={isChanged ? 'bg-amber-50/30' : 'hover:bg-slate-50/50'}>
+                              <td className="py-3 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                                <div className="flex items-center justify-between">
+                                  <span>5. ผลที่คาดว่าจะได้รับ</span>
+                                  {isChanged && (
+                                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
+                                      แก้ไข
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 border border-slate-200 align-top leading-relaxed">
+                                {beforeVersion?.expectedResults || '-'}
+                              </td>
+                              <td className="py-3 px-4 border border-slate-200 align-top leading-relaxed">
+                                {isChanged ? (
+                                  <div className="p-2 rounded-lg bg-amber-100/90 text-amber-950 border border-amber-300 shadow-2xs font-medium">
+                                    {currentVersion.expectedResults}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-slate-800">{currentVersion.expectedResults}</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">[คงเดิม]</span>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })()}
+
+                        {/* 6. หน่วยงานรับผิดชอบหลัก */}
+                        {(() => {
+                          const isChanged =
+                            (currentVersion.department || '').trim() !==
+                            (beforeVersion?.department || '').trim();
+                          return (
+                            <tr className={isChanged ? 'bg-amber-50/30' : 'hover:bg-slate-50/50'}>
+                              <td className="py-3 px-4 font-bold text-slate-900 bg-slate-50/80 border border-slate-200 align-top">
+                                <div className="flex items-center justify-between">
+                                  <span>6. หน่วยงานรับผิดชอบ</span>
+                                  {isChanged && (
+                                    <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-1.5 py-0.5 rounded">
+                                      แก้ไข
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-slate-700 border border-slate-200 align-top">
+                                {beforeVersion?.department || '-'}
+                              </td>
+                              <td className="py-3 px-4 border border-slate-200 align-top font-semibold text-slate-900">
+                                {isChanged ? (
+                                  <span className="p-1.5 rounded-md bg-amber-100/90 text-amber-950 border border-amber-300 font-bold inline-block">
+                                    {currentVersion.department}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center justify-between">
+                                    <span>{currentVersion.department}</span>
+                                    <span className="text-[10px] text-slate-400 font-normal">[คงเดิม]</span>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
             </div>
-          </section>
-        </div>
 
-        {/* =========================================================================
-            3. MODAL FOOTER
-        ========================================================================= */}
-        <div className="bg-slate-50 border-t border-slate-200 px-5 py-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
-          <div className="text-slate-500 text-center sm:text-left">
-            ระบบบันทึกประวัติการเปลี่ยนแปลงและแก้ไขแผนพัฒนาท้องถิ่น (พ.ศ. 2571-2575) |
-            เทศบาลเมืองศิลา
-          </div>
+            {/* =========================================================================
+                3. MODAL FOOTER
+            ========================================================================= */}
+            <div className="bg-slate-50 border-t border-slate-200 px-5 py-3 sm:px-6 flex items-center justify-end gap-3 text-xs shrink-0 print:hidden">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewPrint(true)}
+                  className="bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-95"
+                >
+                  <Printer className="w-4 h-4 text-white" />
+                  <span>พิมพ์ประวัติโครงการ</span>
+                </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-            >
-              <Printer className="w-3.5 h-3.5 text-slate-600" />
-              <span>พิมพ์บัญชีเปรียบเทียบ</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-700 hover:text-slate-900 font-medium px-5 py-2 rounded-xl border border-slate-300 transition-colors cursor-pointer shadow-xs"
+                >
+                  ปิดหน้าต่าง
+                </button>
+              </div>
+            </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="bg-[#1e293b] hover:bg-slate-800 text-white font-medium px-5 py-1.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
-            >
-              ปิดหน้าต่าง
-            </button>
-          </div>
-        </div>
+            {/* แผ่นพิมพ์สำหรับ Direct Print (Ctrl+P) */}
+            <div className="hidden print:block">
+              {renderPrintSheet(false)}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
